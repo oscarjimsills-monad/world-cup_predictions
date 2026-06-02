@@ -200,92 +200,92 @@ const FLAGS = {
   'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Croatia':'🇭🇷','Ghana':'🇬🇭','Panama':'🇵🇦',
 };
 
-// Fixtures: id, group, home, away, date, time, sim (simultaneous final round)
+// Fixtures: utc = ISO datetime string in UTC (EDT = UTC-4)
 const FIXTURES = [
   // Group A
-  {id:1,g:'A',h:'Mexico',a:'South Africa',d:'Jun 11',t:'3:00 PM ET'},
-  {id:2,g:'A',h:'South Korea',a:'Czechia',d:'Jun 11',t:'10:00 PM ET'},
-  {id:3,g:'A',h:'Czechia',a:'South Africa',d:'Jun 18',t:'12:00 PM ET'},
-  {id:4,g:'A',h:'Mexico',a:'South Korea',d:'Jun 18',t:'9:00 PM ET'},
-  {id:5,g:'A',h:'South Africa',a:'South Korea',d:'Jun 24',t:'9:00 PM ET',sim:true},
-  {id:6,g:'A',h:'Czechia',a:'Mexico',d:'Jun 24',t:'9:00 PM ET',sim:true},
+  {id:1,g:'A',h:'Mexico',a:'South Africa',utc:'2026-06-11T19:00Z'},
+  {id:2,g:'A',h:'South Korea',a:'Czechia',utc:'2026-06-12T02:00Z'},
+  {id:3,g:'A',h:'Czechia',a:'South Africa',utc:'2026-06-18T16:00Z'},
+  {id:4,g:'A',h:'Mexico',a:'South Korea',utc:'2026-06-19T01:00Z'},
+  {id:5,g:'A',h:'South Africa',a:'South Korea',utc:'2026-06-25T01:00Z',sim:true},
+  {id:6,g:'A',h:'Czechia',a:'Mexico',utc:'2026-06-25T01:00Z',sim:true},
   // Group B
-  {id:7,g:'B',h:'Canada',a:'Bosnia & Herzegovina',d:'Jun 12',t:'3:00 PM ET'},
-  {id:8,g:'B',h:'Qatar',a:'Switzerland',d:'Jun 13',t:'3:00 PM ET'},
-  {id:9,g:'B',h:'Switzerland',a:'Bosnia & Herzegovina',d:'Jun 18',t:'3:00 PM ET'},
-  {id:10,g:'B',h:'Canada',a:'Qatar',d:'Jun 18',t:'6:00 PM ET'},
-  {id:11,g:'B',h:'Switzerland',a:'Canada',d:'Jun 24',t:'3:00 PM ET',sim:true},
-  {id:12,g:'B',h:'Bosnia & Herzegovina',a:'Qatar',d:'Jun 24',t:'3:00 PM ET',sim:true},
+  {id:7,g:'B',h:'Canada',a:'Bosnia & Herzegovina',utc:'2026-06-12T19:00Z'},
+  {id:8,g:'B',h:'Qatar',a:'Switzerland',utc:'2026-06-13T19:00Z'},
+  {id:9,g:'B',h:'Switzerland',a:'Bosnia & Herzegovina',utc:'2026-06-18T19:00Z'},
+  {id:10,g:'B',h:'Canada',a:'Qatar',utc:'2026-06-18T22:00Z'},
+  {id:11,g:'B',h:'Switzerland',a:'Canada',utc:'2026-06-24T19:00Z',sim:true},
+  {id:12,g:'B',h:'Bosnia & Herzegovina',a:'Qatar',utc:'2026-06-24T19:00Z',sim:true},
   // Group C
-  {id:13,g:'C',h:'Brazil',a:'Morocco',d:'Jun 13',t:'6:00 PM ET'},
-  {id:14,g:'C',h:'Haiti',a:'Scotland',d:'Jun 13',t:'9:00 PM ET'},
-  {id:15,g:'C',h:'Scotland',a:'Morocco',d:'Jun 19',t:'6:00 PM ET'},
-  {id:16,g:'C',h:'Brazil',a:'Haiti',d:'Jun 19',t:'8:30 PM ET'},
-  {id:17,g:'C',h:'Morocco',a:'Haiti',d:'Jun 24',t:'6:00 PM ET',sim:true},
-  {id:18,g:'C',h:'Scotland',a:'Brazil',d:'Jun 24',t:'6:00 PM ET',sim:true},
+  {id:13,g:'C',h:'Brazil',a:'Morocco',utc:'2026-06-13T22:00Z'},
+  {id:14,g:'C',h:'Haiti',a:'Scotland',utc:'2026-06-14T01:00Z'},
+  {id:15,g:'C',h:'Scotland',a:'Morocco',utc:'2026-06-19T22:00Z'},
+  {id:16,g:'C',h:'Brazil',a:'Haiti',utc:'2026-06-20T00:30Z'},
+  {id:17,g:'C',h:'Morocco',a:'Haiti',utc:'2026-06-24T22:00Z',sim:true},
+  {id:18,g:'C',h:'Scotland',a:'Brazil',utc:'2026-06-24T22:00Z',sim:true},
   // Group D
-  {id:19,g:'D',h:'USA',a:'Paraguay',d:'Jun 12',t:'9:00 PM ET'},
-  {id:20,g:'D',h:'Australia',a:'Turkey',d:'Jun 14',t:'12:00 AM ET'},
-  {id:21,g:'D',h:'USA',a:'Australia',d:'Jun 19',t:'3:00 PM ET'},
-  {id:22,g:'D',h:'Turkey',a:'Paraguay',d:'Jun 19',t:'11:00 PM ET'},
-  {id:23,g:'D',h:'Turkey',a:'USA',d:'Jun 25',t:'10:00 PM ET',sim:true},
-  {id:24,g:'D',h:'Paraguay',a:'Australia',d:'Jun 25',t:'10:00 PM ET',sim:true},
+  {id:19,g:'D',h:'USA',a:'Paraguay',utc:'2026-06-13T01:00Z'},
+  {id:20,g:'D',h:'Australia',a:'Turkey',utc:'2026-06-14T04:00Z'},
+  {id:21,g:'D',h:'USA',a:'Australia',utc:'2026-06-19T19:00Z'},
+  {id:22,g:'D',h:'Turkey',a:'Paraguay',utc:'2026-06-20T03:00Z'},
+  {id:23,g:'D',h:'Turkey',a:'USA',utc:'2026-06-26T02:00Z',sim:true},
+  {id:24,g:'D',h:'Paraguay',a:'Australia',utc:'2026-06-26T02:00Z',sim:true},
   // Group E
-  {id:25,g:'E',h:'Germany',a:'Curaçao',d:'Jun 14',t:'1:00 PM ET'},
-  {id:26,g:'E',h:'Ivory Coast',a:'Ecuador',d:'Jun 14',t:'7:00 PM ET'},
-  {id:27,g:'E',h:'Germany',a:'Ivory Coast',d:'Jun 20',t:'4:00 PM ET'},
-  {id:28,g:'E',h:'Ecuador',a:'Curaçao',d:'Jun 20',t:'8:00 PM ET'},
-  {id:29,g:'E',h:'Curaçao',a:'Ivory Coast',d:'Jun 25',t:'4:00 PM ET',sim:true},
-  {id:30,g:'E',h:'Ecuador',a:'Germany',d:'Jun 25',t:'4:00 PM ET',sim:true},
+  {id:25,g:'E',h:'Germany',a:'Curaçao',utc:'2026-06-14T17:00Z'},
+  {id:26,g:'E',h:'Ivory Coast',a:'Ecuador',utc:'2026-06-14T23:00Z'},
+  {id:27,g:'E',h:'Germany',a:'Ivory Coast',utc:'2026-06-20T20:00Z'},
+  {id:28,g:'E',h:'Ecuador',a:'Curaçao',utc:'2026-06-21T00:00Z'},
+  {id:29,g:'E',h:'Curaçao',a:'Ivory Coast',utc:'2026-06-25T20:00Z',sim:true},
+  {id:30,g:'E',h:'Ecuador',a:'Germany',utc:'2026-06-25T20:00Z',sim:true},
   // Group F
-  {id:31,g:'F',h:'Netherlands',a:'Japan',d:'Jun 14',t:'4:00 PM ET'},
-  {id:32,g:'F',h:'Sweden',a:'Tunisia',d:'Jun 14',t:'10:00 PM ET'},
-  {id:33,g:'F',h:'Netherlands',a:'Sweden',d:'Jun 20',t:'1:00 PM ET'},
-  {id:34,g:'F',h:'Tunisia',a:'Japan',d:'Jun 21',t:'12:00 AM ET'},
-  {id:35,g:'F',h:'Tunisia',a:'Netherlands',d:'Jun 25',t:'7:00 PM ET',sim:true},
-  {id:36,g:'F',h:'Japan',a:'Sweden',d:'Jun 25',t:'7:00 PM ET',sim:true},
+  {id:31,g:'F',h:'Netherlands',a:'Japan',utc:'2026-06-14T20:00Z'},
+  {id:32,g:'F',h:'Sweden',a:'Tunisia',utc:'2026-06-15T02:00Z'},
+  {id:33,g:'F',h:'Netherlands',a:'Sweden',utc:'2026-06-20T17:00Z'},
+  {id:34,g:'F',h:'Tunisia',a:'Japan',utc:'2026-06-21T04:00Z'},
+  {id:35,g:'F',h:'Tunisia',a:'Netherlands',utc:'2026-06-25T23:00Z',sim:true},
+  {id:36,g:'F',h:'Japan',a:'Sweden',utc:'2026-06-25T23:00Z',sim:true},
   // Group G
-  {id:37,g:'G',h:'Belgium',a:'Egypt',d:'Jun 15',t:'3:00 PM ET'},
-  {id:38,g:'G',h:'Iran',a:'New Zealand',d:'Jun 15',t:'9:00 PM ET'},
-  {id:39,g:'G',h:'Belgium',a:'Iran',d:'Jun 21',t:'3:00 PM ET'},
-  {id:40,g:'G',h:'New Zealand',a:'Egypt',d:'Jun 21',t:'9:00 PM ET'},
-  {id:41,g:'G',h:'New Zealand',a:'Belgium',d:'Jun 26',t:'11:00 PM ET',sim:true},
-  {id:42,g:'G',h:'Egypt',a:'Iran',d:'Jun 26',t:'11:00 PM ET',sim:true},
+  {id:37,g:'G',h:'Belgium',a:'Egypt',utc:'2026-06-15T19:00Z'},
+  {id:38,g:'G',h:'Iran',a:'New Zealand',utc:'2026-06-16T01:00Z'},
+  {id:39,g:'G',h:'Belgium',a:'Iran',utc:'2026-06-21T19:00Z'},
+  {id:40,g:'G',h:'New Zealand',a:'Egypt',utc:'2026-06-22T01:00Z'},
+  {id:41,g:'G',h:'New Zealand',a:'Belgium',utc:'2026-06-27T03:00Z',sim:true},
+  {id:42,g:'G',h:'Egypt',a:'Iran',utc:'2026-06-27T03:00Z',sim:true},
   // Group H
-  {id:43,g:'H',h:'Spain',a:'Cape Verde',d:'Jun 15',t:'12:00 PM ET'},
-  {id:44,g:'H',h:'Saudi Arabia',a:'Uruguay',d:'Jun 15',t:'6:00 PM ET'},
-  {id:45,g:'H',h:'Spain',a:'Saudi Arabia',d:'Jun 21',t:'12:00 PM ET'},
-  {id:46,g:'H',h:'Uruguay',a:'Cape Verde',d:'Jun 21',t:'6:00 PM ET'},
-  {id:47,g:'H',h:'Cape Verde',a:'Saudi Arabia',d:'Jun 26',t:'8:00 PM ET',sim:true},
-  {id:48,g:'H',h:'Uruguay',a:'Spain',d:'Jun 26',t:'8:00 PM ET',sim:true},
+  {id:43,g:'H',h:'Spain',a:'Cape Verde',utc:'2026-06-15T16:00Z'},
+  {id:44,g:'H',h:'Saudi Arabia',a:'Uruguay',utc:'2026-06-15T22:00Z'},
+  {id:45,g:'H',h:'Spain',a:'Saudi Arabia',utc:'2026-06-21T16:00Z'},
+  {id:46,g:'H',h:'Uruguay',a:'Cape Verde',utc:'2026-06-21T22:00Z'},
+  {id:47,g:'H',h:'Cape Verde',a:'Saudi Arabia',utc:'2026-06-27T00:00Z',sim:true},
+  {id:48,g:'H',h:'Uruguay',a:'Spain',utc:'2026-06-27T00:00Z',sim:true},
   // Group I
-  {id:49,g:'I',h:'France',a:'Senegal',d:'Jun 16',t:'3:00 PM ET'},
-  {id:50,g:'I',h:'Iraq',a:'Norway',d:'Jun 16',t:'6:00 PM ET'},
-  {id:51,g:'I',h:'France',a:'Iraq',d:'Jun 22',t:'5:00 PM ET'},
-  {id:52,g:'I',h:'Norway',a:'Senegal',d:'Jun 22',t:'8:00 PM ET'},
-  {id:53,g:'I',h:'Norway',a:'France',d:'Jun 26',t:'3:00 PM ET',sim:true},
-  {id:54,g:'I',h:'Senegal',a:'Iraq',d:'Jun 26',t:'3:00 PM ET',sim:true},
+  {id:49,g:'I',h:'France',a:'Senegal',utc:'2026-06-16T19:00Z'},
+  {id:50,g:'I',h:'Iraq',a:'Norway',utc:'2026-06-16T22:00Z'},
+  {id:51,g:'I',h:'France',a:'Iraq',utc:'2026-06-22T21:00Z'},
+  {id:52,g:'I',h:'Norway',a:'Senegal',utc:'2026-06-23T00:00Z'},
+  {id:53,g:'I',h:'Norway',a:'France',utc:'2026-06-26T19:00Z',sim:true},
+  {id:54,g:'I',h:'Senegal',a:'Iraq',utc:'2026-06-26T19:00Z',sim:true},
   // Group J
-  {id:55,g:'J',h:'Argentina',a:'Algeria',d:'Jun 16',t:'9:00 PM ET'},
-  {id:56,g:'J',h:'Austria',a:'Jordan',d:'Jun 17',t:'12:00 AM ET'},
-  {id:57,g:'J',h:'Argentina',a:'Austria',d:'Jun 22',t:'1:00 PM ET'},
-  {id:58,g:'J',h:'Jordan',a:'Algeria',d:'Jun 22',t:'11:00 PM ET'},
-  {id:59,g:'J',h:'Algeria',a:'Austria',d:'Jun 27',t:'10:00 PM ET',sim:true},
-  {id:60,g:'J',h:'Jordan',a:'Argentina',d:'Jun 27',t:'10:00 PM ET',sim:true},
+  {id:55,g:'J',h:'Argentina',a:'Algeria',utc:'2026-06-17T01:00Z'},
+  {id:56,g:'J',h:'Austria',a:'Jordan',utc:'2026-06-17T04:00Z'},
+  {id:57,g:'J',h:'Argentina',a:'Austria',utc:'2026-06-22T17:00Z'},
+  {id:58,g:'J',h:'Jordan',a:'Algeria',utc:'2026-06-23T03:00Z'},
+  {id:59,g:'J',h:'Algeria',a:'Austria',utc:'2026-06-28T02:00Z',sim:true},
+  {id:60,g:'J',h:'Jordan',a:'Argentina',utc:'2026-06-28T02:00Z',sim:true},
   // Group K
-  {id:61,g:'K',h:'Portugal',a:'DR Congo',d:'Jun 17',t:'1:00 PM ET'},
-  {id:62,g:'K',h:'Uzbekistan',a:'Colombia',d:'Jun 17',t:'10:00 PM ET'},
-  {id:63,g:'K',h:'Portugal',a:'Uzbekistan',d:'Jun 23',t:'1:00 PM ET'},
-  {id:64,g:'K',h:'Colombia',a:'DR Congo',d:'Jun 23',t:'10:00 PM ET'},
-  {id:65,g:'K',h:'Colombia',a:'Portugal',d:'Jun 27',t:'7:30 PM ET',sim:true},
-  {id:66,g:'K',h:'DR Congo',a:'Uzbekistan',d:'Jun 27',t:'7:30 PM ET',sim:true},
+  {id:61,g:'K',h:'Portugal',a:'DR Congo',utc:'2026-06-17T17:00Z'},
+  {id:62,g:'K',h:'Uzbekistan',a:'Colombia',utc:'2026-06-18T02:00Z'},
+  {id:63,g:'K',h:'Portugal',a:'Uzbekistan',utc:'2026-06-23T17:00Z'},
+  {id:64,g:'K',h:'Colombia',a:'DR Congo',utc:'2026-06-24T02:00Z'},
+  {id:65,g:'K',h:'Colombia',a:'Portugal',utc:'2026-06-27T23:30Z',sim:true},
+  {id:66,g:'K',h:'DR Congo',a:'Uzbekistan',utc:'2026-06-27T23:30Z',sim:true},
   // Group L
-  {id:67,g:'L',h:'England',a:'Croatia',d:'Jun 17',t:'4:00 PM ET'},
-  {id:68,g:'L',h:'Ghana',a:'Panama',d:'Jun 17',t:'7:00 PM ET'},
-  {id:69,g:'L',h:'England',a:'Ghana',d:'Jun 23',t:'4:00 PM ET'},
-  {id:70,g:'L',h:'Panama',a:'Croatia',d:'Jun 23',t:'7:00 PM ET'},
-  {id:71,g:'L',h:'Panama',a:'England',d:'Jun 27',t:'5:00 PM ET',sim:true},
-  {id:72,g:'L',h:'Croatia',a:'Ghana',d:'Jun 27',t:'5:00 PM ET',sim:true},
+  {id:67,g:'L',h:'England',a:'Croatia',utc:'2026-06-17T20:00Z'},
+  {id:68,g:'L',h:'Ghana',a:'Panama',utc:'2026-06-17T23:00Z'},
+  {id:69,g:'L',h:'England',a:'Ghana',utc:'2026-06-23T20:00Z'},
+  {id:70,g:'L',h:'Panama',a:'Croatia',utc:'2026-06-23T23:00Z'},
+  {id:71,g:'L',h:'Panama',a:'England',utc:'2026-06-27T21:00Z',sim:true},
+  {id:72,g:'L',h:'Croatia',a:'Ghana',utc:'2026-06-27T21:00Z',sim:true},
 ];
 
 // Knockout bracket definitions
@@ -489,6 +489,15 @@ function recomputeKnockout() {
   return resolved;
 }
 
+// ===================== TIME FORMATTING =====================
+
+function formatLocalTime(utcStr) {
+  const d = new Date(utcStr);
+  const date = d.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+  const time = d.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'});
+  return `${date} · ${time}`;
+}
+
 // ===================== RENDERING =====================
 
 function flag(team) {
@@ -545,7 +554,7 @@ function renderGroups() {
         </div>
         <div class="fixture-team">${flag(f.a)}<span>${f.a}</span></div>
       </div>
-      <div class="fixture-date">${f.d} · ${f.t}${f.sim ? ' <span class="sim-badge">FINAL</span>' : ''}</div>`;
+      <div class="fixture-date">${formatLocalTime(f.utc)}${f.sim ? ' <span class="sim-badge">FINAL</span>' : ''}</div>`;
     }).join('');
 
     card.innerHTML = `
