@@ -72,8 +72,9 @@ main{padding:20px;max-width:1600px;margin:0 auto}
 .group-divider{border-top:2px solid rgba(200,169,81,.2);margin:6px 10px}
 
 /* Knockout Bracket */
-#knockout-section{overflow-x:auto}
-.bracket-wrapper{display:flex;gap:0;padding:20px 10px 0;min-width:1100px}
+#knockout-section{overflow:visible}
+#bracket-scroll-container{overflow-x:auto}
+.bracket-wrapper{display:flex;gap:0;padding:20px 10px 20px;min-width:1100px;align-items:flex-start}
 .bracket-round{display:flex;flex-direction:column;min-width:210px;flex-shrink:0}
 .round-header{text-align:center;font-size:.75rem;font-weight:700;color:var(--primary);letter-spacing:1px;text-transform:uppercase;padding:8px;margin-bottom:0;background:var(--surface2);border-radius:6px 6px 0 0;border:1px solid var(--border)}
 .round-matches{display:flex;flex-direction:column;height:1440px}
@@ -138,7 +139,9 @@ main{padding:20px;max-width:1600px;margin:0 auto}
     <div class="groups-grid" id="groups-grid"></div>
   </div>
   <div id="knockout-section" class="section">
-    <div class="bracket-wrapper" id="bracket-wrapper"></div>
+    <div id="bracket-scroll-container">
+      <div class="bracket-wrapper" id="bracket-wrapper"></div>
+    </div>
     <div class="third-place-section" id="third-place-section"></div>
   </div>
   <div id="export-section" class="section">
@@ -293,45 +296,45 @@ const FIXTURES = [
 // Knockout bracket definitions
 // Slot types: {p:pos,g:group} | {third:rank} | {win:matchId} | {lose:matchId}
 const R32 = [
-  {id:73,h:{p:2,g:'A'},a:{p:2,g:'B'},label:'R32'},
-  {id:74,h:{p:1,g:'E'},a:{third:1},label:'R32'},
-  {id:75,h:{p:1,g:'F'},a:{p:2,g:'C'},label:'R32'},
-  {id:76,h:{p:1,g:'C'},a:{p:2,g:'F'},label:'R32'},
-  {id:77,h:{p:1,g:'I'},a:{third:2},label:'R32'},
-  {id:78,h:{p:2,g:'E'},a:{p:2,g:'I'},label:'R32'},
-  {id:79,h:{p:1,g:'A'},a:{third:3},label:'R32'},
-  {id:80,h:{p:1,g:'L'},a:{third:4},label:'R32'},
-  {id:81,h:{p:1,g:'D'},a:{third:5},label:'R32'},
-  {id:82,h:{p:1,g:'G'},a:{third:6},label:'R32'},
-  {id:83,h:{p:2,g:'K'},a:{p:2,g:'L'},label:'R32'},
-  {id:84,h:{p:1,g:'H'},a:{p:2,g:'J'},label:'R32'},
-  {id:85,h:{p:1,g:'B'},a:{third:7},label:'R32'},
-  {id:86,h:{p:1,g:'J'},a:{p:2,g:'H'},label:'R32'},
-  {id:87,h:{p:1,g:'K'},a:{third:8},label:'R32'},
-  {id:88,h:{p:2,g:'D'},a:{p:2,g:'G'},label:'R32'},
+  {id:73,h:{p:2,g:'A'},a:{p:2,g:'B'},label:'R32',utc:'2026-06-28T19:00Z'},
+  {id:74,h:{p:1,g:'E'},a:{third:1},label:'R32',utc:'2026-06-29T20:30Z'},
+  {id:75,h:{p:1,g:'F'},a:{p:2,g:'C'},label:'R32',utc:'2026-06-30T01:00Z'},
+  {id:76,h:{p:1,g:'C'},a:{p:2,g:'F'},label:'R32',utc:'2026-06-29T17:00Z'},
+  {id:77,h:{p:1,g:'I'},a:{third:2},label:'R32',utc:'2026-06-30T21:00Z'},
+  {id:78,h:{p:2,g:'E'},a:{p:2,g:'I'},label:'R32',utc:'2026-06-30T17:00Z'},
+  {id:79,h:{p:1,g:'A'},a:{third:3},label:'R32',utc:'2026-07-01T01:00Z'},
+  {id:80,h:{p:1,g:'L'},a:{third:4},label:'R32',utc:'2026-07-01T16:00Z'},
+  {id:81,h:{p:1,g:'D'},a:{third:5},label:'R32',utc:'2026-07-02T00:00Z'},
+  {id:82,h:{p:1,g:'G'},a:{third:6},label:'R32',utc:'2026-07-01T20:00Z'},
+  {id:83,h:{p:2,g:'K'},a:{p:2,g:'L'},label:'R32',utc:'2026-07-02T23:00Z'},
+  {id:84,h:{p:1,g:'H'},a:{p:2,g:'J'},label:'R32',utc:'2026-07-02T19:00Z'},
+  {id:85,h:{p:1,g:'B'},a:{third:7},label:'R32',utc:'2026-07-03T03:00Z'},
+  {id:86,h:{p:1,g:'J'},a:{p:2,g:'H'},label:'R32',utc:'2026-07-03T22:00Z'},
+  {id:87,h:{p:1,g:'K'},a:{third:8},label:'R32',utc:'2026-07-04T01:30Z'},
+  {id:88,h:{p:2,g:'D'},a:{p:2,g:'G'},label:'R32',utc:'2026-07-03T18:00Z'},
 ];
 const R16 = [
-  {id:89,h:{win:74},a:{win:77},label:'R16'},
-  {id:90,h:{win:73},a:{win:75},label:'R16'},
-  {id:91,h:{win:76},a:{win:78},label:'R16'},
-  {id:92,h:{win:79},a:{win:80},label:'R16'},
-  {id:93,h:{win:83},a:{win:84},label:'R16'},
-  {id:94,h:{win:81},a:{win:82},label:'R16'},
-  {id:95,h:{win:86},a:{win:88},label:'R16'},
-  {id:96,h:{win:85},a:{win:87},label:'R16'},
+  {id:89,h:{win:74},a:{win:77},label:'R16',utc:'2026-07-04T21:00Z'},
+  {id:90,h:{win:73},a:{win:75},label:'R16',utc:'2026-07-04T17:00Z'},
+  {id:91,h:{win:76},a:{win:78},label:'R16',utc:'2026-07-05T20:00Z'},
+  {id:92,h:{win:79},a:{win:80},label:'R16',utc:'2026-07-06T00:00Z'},
+  {id:93,h:{win:83},a:{win:84},label:'R16',utc:'2026-07-06T19:00Z'},
+  {id:94,h:{win:81},a:{win:82},label:'R16',utc:'2026-07-07T00:00Z'},
+  {id:95,h:{win:86},a:{win:88},label:'R16',utc:'2026-07-07T16:00Z'},
+  {id:96,h:{win:85},a:{win:87},label:'R16',utc:'2026-07-07T20:00Z'},
 ];
 const QF = [
-  {id:97,h:{win:89},a:{win:90},label:'QF'},
-  {id:98,h:{win:93},a:{win:94},label:'QF'},
-  {id:99,h:{win:91},a:{win:92},label:'QF'},
-  {id:100,h:{win:95},a:{win:96},label:'QF'},
+  {id:97,h:{win:89},a:{win:90},label:'QF',utc:'2026-07-09T20:00Z'},
+  {id:98,h:{win:93},a:{win:94},label:'QF',utc:'2026-07-10T19:00Z'},
+  {id:99,h:{win:91},a:{win:92},label:'QF',utc:'2026-07-11T21:00Z'},
+  {id:100,h:{win:95},a:{win:96},label:'QF',utc:'2026-07-12T01:00Z'},
 ];
 const SF = [
-  {id:101,h:{win:97},a:{win:98},label:'SF'},
-  {id:102,h:{win:99},a:{win:100},label:'SF'},
+  {id:101,h:{win:97},a:{win:98},label:'SF',utc:'2026-07-14T19:00Z'},
+  {id:102,h:{win:99},a:{win:100},label:'SF',utc:'2026-07-15T19:00Z'},
 ];
-const THIRD_PLACE = {id:103,h:{lose:101},a:{lose:102},label:'3rd Place'};
-const FINAL = {id:104,h:{win:101},a:{win:102},label:'Final'};
+const THIRD_PLACE = {id:103,h:{lose:101},a:{lose:102},label:'3rd Place',utc:'2026-07-18T21:00Z'};
+const FINAL = {id:104,h:{win:101},a:{win:102},label:'Final',utc:'2026-07-19T19:00Z'};
 const ALL_KO = [...R32,...R16,...QF,...SF,THIRD_PLACE,FINAL];
 
 // ===================== STATE =====================
@@ -1250,48 +1253,144 @@ function makeMatchCard(match, resolved) {
         value="${sc.a != null && sc.a !== '' ? sc.a : ''}"
         data-mid="${match.id}" data-side="a" ${canInput?'':'disabled'} placeholder="-">
     </div>
-    <div class="bracket-meta">${match.label}${match.id===104?' 🏆':''}</div>`;
+    <div class="bracket-meta">${match.label}${match.id===104?' 🏆':match.id===103?' 🥉':''}${match.utc ? ' · ' + formatLocalTime(match.utc) : ''}</div>`;
   return div;
 }
 
+// Build a connector SVG between two rounds.
+// leftCount = number of matches in left round, totalH = round-matches height (1440)
+function makeConnectorSVG(leftCount, totalH) {
+  const W = 28, H = totalH;
+  const slotH = H / leftCount;          // height of each left-side slot
+  const pairH = slotH * 2;             // height of each pair (= right-side slot height)
+  const pairs = leftCount / 2;
+
+  let paths = '';
+  for (let i = 0; i < pairs; i++) {
+    const y1   = i * pairH + slotH * 0.5;   // center of top match in pair
+    const y2   = i * pairH + slotH * 1.5;   // center of bottom match in pair
+    const ymid = i * pairH + pairH * 0.5;   // center of right-side match
+    const mx   = W / 2;
+    // two horizontals + vertical spine + outgoing horizontal
+    paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
+    paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
+    paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${y2}"/>`;
+    paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
+  }
+
+  // The connector wraps in a div to match the column structure (header + matches)
+  const HEADER_H = 37; // approximate round-header height in px
+  const wrap = document.createElement('div');
+  wrap.style.cssText = `flex-shrink:0;display:flex;flex-direction:column`;
+  const headerSpacer = document.createElement('div');
+  headerSpacer.style.cssText = `height:${HEADER_H}px;flex-shrink:0`;
+  wrap.appendChild(headerSpacer);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.style.cssText = 'display:block;overflow:visible';
+  svg.innerHTML = `<g stroke="#c8a951" stroke-width="1.5" fill="none" opacity="0.7">${paths}</g>`;
+  wrap.appendChild(svg);
+  return wrap;
+}
+
+let _tpRafId = null;
 function renderKnockout() {
+  if (_tpRafId !== null) { cancelAnimationFrame(_tpRafId); _tpRafId = null; }
   const resolved = recomputeKnockout();
   const getMatch = id => ALL_KO.find(m => m.id === id);
+  const BRACKET_H = 1440;
 
   // Main bracket
   const wrapper = document.getElementById('bracket-wrapper');
   wrapper.innerHTML = '';
 
-  BRACKET_DISPLAY.forEach(round => {
+  BRACKET_DISPLAY.forEach((round, ri) => {
+    // Connector from previous round
+    if (ri > 0) {
+      const prevCount = BRACKET_DISPLAY[ri - 1].ids.length;
+      wrapper.appendChild(makeConnectorSVG(prevCount, BRACKET_H));
+    }
+
+    // Round column
     const col = document.createElement('div');
     col.className = 'bracket-round';
-    col.innerHTML = `<div class="round-header">${round.label}</div>`;
-    const matchesDiv = document.createElement('div');
-    matchesDiv.className = 'round-matches';
 
-    round.ids.forEach(id => {
-      const match = getMatch(id);
-      const slot = document.createElement('div');
-      slot.className = 'bracket-slot';
-      slot.style.flex = round.flex;
-      slot.appendChild(makeMatchCard(match, resolved));
-      matchesDiv.appendChild(slot);
-    });
+    if (round.ids[0] === 104) {
+      // Final column: normal full-height slot so SF connector aligns correctly
+      col.innerHTML = `<div class="round-header">🏆 Final</div>`;
+      const matchesDiv = document.createElement('div');
+      matchesDiv.className = 'round-matches';
+      const finalSlot = document.createElement('div');
+      finalSlot.className = 'bracket-slot';
+      finalSlot.style.flex = round.flex;
+      finalSlot.appendChild(makeMatchCard(getMatch(104), resolved));
+      matchesDiv.appendChild(finalSlot);
+      col.appendChild(matchesDiv);
+    } else {
+      col.innerHTML = `<div class="round-header">${round.label}</div>`;
+      const matchesDiv = document.createElement('div');
+      matchesDiv.className = 'round-matches';
+      round.ids.forEach(id => {
+        const slot = document.createElement('div');
+        slot.className = 'bracket-slot';
+        slot.style.flex = round.flex;
+        slot.appendChild(makeMatchCard(getMatch(id), resolved));
+        matchesDiv.appendChild(slot);
+      });
+      col.appendChild(matchesDiv);
+    }
 
-    col.appendChild(matchesDiv);
     wrapper.appendChild(col);
   });
 
-  // 3rd place — shown below the main bracket
+  // 3rd place section — rendered below bracket, aligned under Finals column
   const tpSection = document.getElementById('third-place-section');
   tpSection.innerHTML = '';
-  const tpLabel = document.createElement('div');
-  tpLabel.style.cssText = 'color:var(--muted);font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:0 0 8px 4px';
-  tpLabel.textContent = '3rd Place Playoff';
-  tpSection.appendChild(tpLabel);
-  const tpCard = makeMatchCard(THIRD_PLACE, resolved);
-  tpCard.style.maxWidth = '210px';
-  tpSection.appendChild(tpCard);
+
+  function buildThirdPlaceSection() {
+    const finalCol = wrapper.querySelector('.bracket-round:last-child');
+    const scrollContainer = document.getElementById('bracket-scroll-container');
+    // Only render if section is visible (getBoundingClientRect gives real values)
+    const finalRect = finalCol.getBoundingClientRect();
+    if (finalRect.width === 0) return; // section hidden (display:none), skip
+
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const leftOffset = finalRect.left - containerRect.left + scrollContainer.scrollLeft;
+
+    const TP_PAD = 10;
+    tpSection.innerHTML = '';
+    tpSection.style.cssText = `padding:0 ${TP_PAD}px 24px;min-width:${Math.round(leftOffset + 210 + TP_PAD)}px`;
+
+    const spacer = document.createElement('div');
+    spacer.style.cssText = `display:inline-block;width:${Math.round(leftOffset - TP_PAD)}px;flex-shrink:0`;
+    tpSection.appendChild(spacer);
+
+    const tpWrap = document.createElement('div');
+    tpWrap.style.cssText = 'display:inline-block;width:210px;vertical-align:top';
+
+    const tpHdr = document.createElement('div');
+    tpHdr.style.cssText = 'text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--surface2);border:1px solid var(--border);border-radius:6px 6px 0 0;padding:8px;margin-bottom:0';
+    tpHdr.textContent = '🥉 3rd Place Playoff';
+    tpWrap.appendChild(tpHdr);
+
+    const tpCard = makeMatchCard(THIRD_PLACE, resolved);
+    tpCard.style.margin = '0';
+    tpCard.style.borderRadius = '0 0 8px 8px';
+    tpCard.style.borderTop = 'none';
+    tpWrap.appendChild(tpCard);
+    tpSection.appendChild(tpWrap);
+
+    tpSection.querySelectorAll('.bracket-score-input').forEach(inp => {
+      inp.addEventListener('input', onKoInput);
+    });
+  }
+
+  // Try immediately (works when section is already visible)
+  // Fall back to RAF for the tab-switch case where layout hasn't painted yet
+  if (document.getElementById('knockout-section').classList.contains('active')) {
+    _tpRafId = requestAnimationFrame(() => { _tpRafId = null; buildThirdPlaceSection(); });
+  }
 
   // Attach KO event listeners
   document.querySelectorAll('.bracket-score-input').forEach(inp => {
