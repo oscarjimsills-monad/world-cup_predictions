@@ -1725,13 +1725,13 @@ function computeAutoElim(resolved) {
   return elim;
 }
 
-// All teams that won at least one match in 73-102 (unique, in bracket order)
+// All teams entering the knockout bracket (all 32 R32 participants), in bracket order
 function getKoTeams(resolved) {
   const seen = new Set();
   const teams = [];
-  [...R32,...R16,...QF,...SF].forEach(m => {
+  R32.forEach(m => {
     const r = resolved[m.id] || {};
-    if (r.winner && !seen.has(r.winner)) { seen.add(r.winner); teams.push(r.winner); }
+    [r.h, r.a].forEach(t => { if (t && !seen.has(t)) { seen.add(t); teams.push(t); } });
   });
   return teams;
 }
