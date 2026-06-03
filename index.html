@@ -1290,36 +1290,6 @@ function makeMatchCard(match, resolved) {
   return div;
 }
 
-// Build SVG path strings for a connector between two rounds.
-// slotH = actual pixel height of each left-side slot (measured from DOM)
-// leftCount = number of matches in the left round
-// toFinal = true for SF→Final: two independent elbows, no full spine
-function connectorPaths(leftCount, slotH, toFinal) {
-  const W = 28;
-  const pairH = slotH * 2;
-  const pairs = leftCount / 2;
-  const mx = W / 2;
-  let paths = '';
-  for (let i = 0; i < pairs; i++) {
-    const y1   = i * pairH + slotH * 0.5;
-    const y2   = i * pairH + slotH * 1.5;
-    const ymid = i * pairH + pairH * 0.5;
-    if (toFinal) {
-      paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
-      paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${ymid}"/>`;
-      paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
-      paths += `<line x1="${mx}" y1="${y2}" x2="${mx}" y2="${ymid}"/>`;
-      paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
-    } else {
-      paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
-      paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
-      paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${y2}"/>`;
-      paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
-    }
-  }
-  return paths;
-}
-
 // Create a connector placeholder div. Filled with real SVG once DOM is measured.
 function makeConnectorPlaceholder(leftCount, toFinal) {
   const div = document.createElement('div');
@@ -1330,31 +1300,71 @@ function makeConnectorPlaceholder(leftCount, toFinal) {
   return div;
 }
 
-// Fill all connector placeholders with SVGs measured from the real DOM layout.
-// Each connector sits between two round columns; slot height is measured from the
-// LEFT round so each connector uses the correct per-round card height.
+// Fill all connector placeholders using actual card DOM positions.
+// This avoids all analytic assumptions about slot heights — each line is drawn
+// from the measured center of a left-round card to the measured center of the
+// corresponding right-round card, regardless of flex sizing.
 function fillConnectors(wrapper) {
   const rounds       = Array.from(wrapper.querySelectorAll('.bracket-round'));
   const placeholders = Array.from(wrapper.querySelectorAll('.connector-placeholder'));
   if (!placeholders.length || !rounds.length) return;
 
-  // Visibility guard — if hidden, getBCR returns 0
-  const firstSlot = rounds[0].querySelector('.bracket-slot');
-  if (!firstSlot || firstSlot.getBoundingClientRect().height === 0) return;
+  // Visibility guard
+  if (rounds[0].getBoundingClientRect().height === 0) return;
 
   const headerH = rounds[0].querySelector('.round-header').getBoundingClientRect().height;
+  const W = 28, mx = W / 2;
 
-  // placeholder[i] sits between rounds[i] and rounds[i+1]; use rounds[i] slot height
+  // placeholder[ci] sits between rounds[ci] and rounds[ci+1]
   placeholders.forEach((ph, ci) => {
-    const leftRound = rounds[ci];
-    const leftSlot  = leftRound?.querySelector('.bracket-slot');
-    if (!leftSlot) return;
-    const slotH     = leftSlot.getBoundingClientRect().height;
+    const leftRound  = rounds[ci];
+    const rightRound = rounds[ci + 1];
+    if (!leftRound || !rightRound) return;
 
-    const leftCount = parseInt(ph.dataset.leftCount);
-    const toFinal   = ph.dataset.toFinal === '1';
-    const totalH    = slotH * leftCount;
-    const W = 28;
+    const leftCards  = Array.from(leftRound.querySelectorAll('.bracket-match'));
+    const rightCards = Array.from(rightRound.querySelectorAll('.bracket-match'));
+    const toFinal    = ph.dataset.toFinal === '1';
+
+    // SVG y=0 is at the top of the placeholder plus the header spacer height
+    const phTop    = ph.getBoundingClientRect().top;
+    const svgOrigY = phTop + headerH;
+
+    // card center in SVG-local coordinates
+    const cy = card => {
+      const r = card.getBoundingClientRect();
+      return r.top + r.height / 2 - svgOrigY;
+    };
+
+    const pairs = leftCards.length / 2;
+    let paths = '';
+    let maxY = 0;
+
+    for (let i = 0; i < pairs; i++) {
+      const c1 = leftCards[i * 2];
+      const c2 = leftCards[i * 2 + 1];
+      const cr = rightCards[i];
+      if (!c1 || !c2) continue;
+
+      const y1   = cy(c1);
+      const y2   = cy(c2);
+      const ymid = cr ? cy(cr) : (y1 + y2) / 2;
+
+      maxY = Math.max(maxY, y2);
+
+      if (toFinal) {
+        // Two independent elbows — no spine that could imply a 3rd-place connection
+        paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
+        paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${ymid}"/>`;
+        paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
+        paths += `<line x1="${mx}" y1="${y2}" x2="${mx}" y2="${ymid}"/>`;
+        paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
+      } else {
+        paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
+        paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
+        paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${y2}"/>`;
+        paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
+      }
+    }
 
     ph.innerHTML = '';
     const spacer = document.createElement('div');
@@ -1363,9 +1373,9 @@ function fillConnectors(wrapper) {
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', W);
-    svg.setAttribute('height', totalH);
+    svg.setAttribute('height', Math.ceil(maxY) + 4);
     svg.style.cssText = 'display:block;overflow:visible';
-    svg.innerHTML = `<g stroke="#c8a951" stroke-width="1.5" fill="none" opacity="0.7">${connectorPaths(leftCount, slotH, toFinal)}</g>`;
+    svg.innerHTML = `<g stroke="#c8a951" stroke-width="1.5" fill="none" opacity="0.7">${paths}</g>`;
     ph.appendChild(svg);
   });
 }
