@@ -1290,53 +1290,79 @@ function makeMatchCard(match, resolved) {
   return div;
 }
 
-// Build a connector SVG between two rounds.
-// leftCount = number of matches in left round, totalH = round-matches height (1440)
-// toFinal = true for the SF→Final connector: draws two separate arms converging to center
-//           rather than a full spine, so no line extends toward the 3rd-place section
-function makeConnectorSVG(leftCount, totalH, toFinal = false) {
-  const W = 28, H = totalH;
-  const slotH = H / leftCount;          // height of each left-side slot
-  const pairH = slotH * 2;             // height of each pair (= right-side slot height)
+// Build SVG path strings for a connector between two rounds.
+// slotH = actual pixel height of each left-side slot (measured from DOM)
+// leftCount = number of matches in the left round
+// toFinal = true for SF→Final: two independent elbows, no full spine
+function connectorPaths(leftCount, slotH, toFinal) {
+  const W = 28;
+  const pairH = slotH * 2;
   const pairs = leftCount / 2;
-
+  const mx = W / 2;
   let paths = '';
   for (let i = 0; i < pairs; i++) {
-    const y1   = i * pairH + slotH * 0.5;   // center of top match in pair
-    const y2   = i * pairH + slotH * 1.5;   // center of bottom match in pair
-    const ymid = i * pairH + pairH * 0.5;   // center of right-side match
-    const mx   = W / 2;
+    const y1   = i * pairH + slotH * 0.5;
+    const y2   = i * pairH + slotH * 1.5;
+    const ymid = i * pairH + pairH * 0.5;
     if (toFinal) {
-      // Two independent elbows — top arm goes DOWN to ymid, bottom arm goes UP to ymid
-      // No line exists outside the ymid range, keeping the 3rd-place area visually clean
       paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
       paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${ymid}"/>`;
       paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
       paths += `<line x1="${mx}" y1="${y2}" x2="${mx}" y2="${ymid}"/>`;
       paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
     } else {
-      // Standard bracket: two horizontals + vertical spine + outgoing horizontal
       paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
       paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
       paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${y2}"/>`;
       paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
     }
   }
+  return paths;
+}
 
-  // The connector wraps in a div to match the column structure (header + matches)
-  const HEADER_H = 37; // approximate round-header height in px
-  const wrap = document.createElement('div');
-  wrap.style.cssText = `flex-shrink:0;display:flex;flex-direction:column`;
-  const headerSpacer = document.createElement('div');
-  headerSpacer.style.cssText = `height:${HEADER_H}px;flex-shrink:0`;
-  wrap.appendChild(headerSpacer);
-  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-  svg.setAttribute('width', W);
-  svg.setAttribute('height', H);
-  svg.style.cssText = 'display:block;overflow:visible';
-  svg.innerHTML = `<g stroke="#c8a951" stroke-width="1.5" fill="none" opacity="0.7">${paths}</g>`;
-  wrap.appendChild(svg);
-  return wrap;
+// Create a connector placeholder div. Filled with real SVG once DOM is measured.
+function makeConnectorPlaceholder(leftCount, toFinal) {
+  const div = document.createElement('div');
+  div.className = 'connector-placeholder';
+  div.dataset.leftCount = leftCount;
+  div.dataset.toFinal = toFinal ? '1' : '0';
+  div.style.cssText = 'flex-shrink:0;display:flex;flex-direction:column;width:28px';
+  return div;
+}
+
+// Fill all connector placeholders with SVGs measured from the real DOM layout.
+function fillConnectors(wrapper) {
+  const placeholders = wrapper.querySelectorAll('.connector-placeholder');
+  if (!placeholders.length) return;
+
+  // Measure from the first round column's first slot
+  const firstSlot = wrapper.querySelector('.bracket-round .bracket-slot');
+  if (!firstSlot) return;
+  const slotRect = firstSlot.getBoundingClientRect();
+  if (slotRect.height === 0) return; // section hidden — skip
+
+  const headerEl = wrapper.querySelector('.bracket-round .round-header');
+  const headerH = Math.round(headerEl.getBoundingClientRect().height);
+  const slotH   = slotRect.height; // use exact (sub-pixel) value for accuracy
+
+  placeholders.forEach(ph => {
+    const leftCount = parseInt(ph.dataset.leftCount);
+    const toFinal   = ph.dataset.toFinal === '1';
+    const totalH    = slotH * leftCount;
+    const W = 28;
+
+    ph.innerHTML = '';
+    const spacer = document.createElement('div');
+    spacer.style.cssText = `height:${headerH}px;flex-shrink:0`;
+    ph.appendChild(spacer);
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', W);
+    svg.setAttribute('height', totalH);
+    svg.style.cssText = 'display:block;overflow:visible';
+    svg.innerHTML = `<g stroke="#c8a951" stroke-width="1.5" fill="none" opacity="0.7">${connectorPaths(leftCount, slotH, toFinal)}</g>`;
+    ph.appendChild(svg);
+  });
 }
 
 let _tpRafId = null;
@@ -1344,18 +1370,17 @@ function renderKnockout() {
   if (_tpRafId !== null) { cancelAnimationFrame(_tpRafId); _tpRafId = null; }
   const resolved = recomputeKnockout();
   const getMatch = id => ALL_KO.find(m => m.id === id);
-  const BRACKET_H = 1440;
 
   // Main bracket
   const wrapper = document.getElementById('bracket-wrapper');
   wrapper.innerHTML = '';
 
   BRACKET_DISPLAY.forEach((round, ri) => {
-    // Connector from previous round
+    // Connector placeholder — filled with real SVG after DOM measurement
     if (ri > 0) {
       const prevCount = BRACKET_DISPLAY[ri - 1].ids.length;
-      const toFinal = round.ids[0] === 104; // SF→Final: use two-arm style
-      wrapper.appendChild(makeConnectorSVG(prevCount, BRACKET_H, toFinal));
+      const toFinal = round.ids[0] === 104;
+      wrapper.appendChild(makeConnectorPlaceholder(prevCount, toFinal));
     }
 
     // Round column
@@ -1435,7 +1460,11 @@ function renderKnockout() {
   // Try immediately (works when section is already visible)
   // Fall back to RAF for the tab-switch case where layout hasn't painted yet
   if (document.getElementById('knockout-section').classList.contains('active')) {
-    _tpRafId = requestAnimationFrame(() => { _tpRafId = null; buildThirdPlaceSection(); });
+    _tpRafId = requestAnimationFrame(() => {
+      _tpRafId = null;
+      fillConnectors(wrapper);
+      buildThirdPlaceSection();
+    });
   }
 
   // Attach KO event listeners
