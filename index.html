@@ -354,6 +354,21 @@ function saveState() {
   localStorage.setItem('wc2026', JSON.stringify({groupScores, knockoutScores, knockoutTeams}));
 }
 
+// ===================== FIFA WORLD RANKINGS (April 2026) =====================
+// Used as final tiebreaker — lower number = better rank
+const FIFA_RANKINGS = {
+  'France':1,'Spain':2,'Argentina':3,'England':4,'Portugal':5,
+  'Brazil':6,'Netherlands':7,'Morocco':8,'Belgium':9,'Germany':10,
+  'Croatia':11,'Colombia':12,'Senegal':14,'Mexico':15,'USA':16,
+  'Uruguay':17,'Japan':18,'Switzerland':19,'Turkey':22,'Ecuador':23,
+  'Austria':24,'South Korea':25,'Australia':26,'Algeria':28,'Egypt':29,
+  'Canada':30,'Norway':31,'Panama':33,'Ivory Coast':34,'Paraguay':39,
+  'Czechia':41,'Scotland':43,'Tunisia':44,'DR Congo':46,'Uzbekistan':50,
+  'Qatar':55,'Iraq':57,'South Africa':60,'Saudi Arabia':61,'Jordan':63,
+  'Bosnia & Herzegovina':65,'Cape Verde':69,'Ghana':74,'Iran':75,
+  'Sweden':37,'Curaçao':82,'Haiti':83,'New Zealand':85,
+};
+
 // ===================== COMPUTATION =====================
 
 function computeStandings(g) {
@@ -374,34 +389,78 @@ function computeStandings(g) {
     else { st[f.h].d++; st[f.h].pts++; st[f.a].d++; st[f.a].pts++; }
   });
 
-  return [...teams].sort((a,b) => {
-    const aS = st[a], bS = st[b];
-    if (bS.pts !== aS.pts) return bS.pts - aS.pts;
-    // H2H among tied teams (simplified pairwise)
-    const h2hA = h2h(a,b,g), h2hB = h2h(b,a,g);
-    if (h2hA.pts !== h2hB.pts) return h2hB.pts - h2hA.pts;
-    const h2hGdA = h2hA.gf - h2hA.ga, h2hGdB = h2hB.gf - h2hB.ga;
-    if (h2hGdA !== h2hGdB) return h2hGdB - h2hGdA;
-    if (h2hA.gf !== h2hB.gf) return h2hB.gf - h2hA.gf;
-    // Overall GD then GF
-    const gdA = aS.gf - aS.ga, gdB = bS.gf - bS.ga;
-    if (gdA !== gdB) return gdB - gdA;
-    if (aS.gf !== bS.gf) return bS.gf - aS.gf;
-    return a.localeCompare(b);
-  }).map(t => ({team:t, ...st[t], gd: st[t].gf - st[t].ga}));
-}
+  // Compute H2H stats for a team within a specific subset of teams
+  function h2hAmong(team, subset) {
+    let gf=0,ga=0,pts=0;
+    FIXTURES.filter(f => f.g===g && subset.includes(f.h) && subset.includes(f.a)).forEach(f => {
+      const sc = groupScores[f.id];
+      if (!sc || sc.h==null || sc.a==null) return;
+      const hg=+sc.h, ag=+sc.a;
+      if (isNaN(hg)||isNaN(ag)) return;
+      if (f.h===team) { gf+=hg; ga+=ag; pts += hg>ag?3:hg===ag?1:0; }
+      else if (f.a===team) { gf+=ag; ga+=hg; pts += ag>hg?3:hg===ag?1:0; }
+    });
+    return {gf,ga,pts,gd:gf-ga};
+  }
 
-function h2h(tA, tB, g) {
-  let gf=0,ga=0,pts=0;
-  FIXTURES.filter(f => f.g === g).forEach(f => {
-    const sc = groupScores[f.id];
-    if (!sc || sc.h == null || sc.a == null) return;
-    const hg=+sc.h, ag=+sc.a;
-    if (isNaN(hg)||isNaN(ag)) return;
-    if (f.h===tA && f.a===tB) { gf+=hg; ga+=ag; pts += hg>ag?3:hg===ag?1:0; }
-    else if (f.h===tB && f.a===tA) { gf+=ag; ga+=hg; pts += ag>hg?3:hg===ag?1:0; }
-  });
-  return {gf,ga,pts};
+  // Step 2: overall GD → GF → FIFA ranking
+  function sortByOverall(list) {
+    return [...list].sort((a,b) => {
+      const gdA=st[a].gf-st[a].ga, gdB=st[b].gf-st[b].ga;
+      if (gdB!==gdA) return gdB-gdA;
+      if (st[b].gf!==st[a].gf) return st[b].gf-st[a].gf;
+      return (FIFA_RANKINGS[a]||999)-(FIFA_RANKINGS[b]||999);
+    });
+  }
+
+  // Break tie within a group of teams already known to have equal overall pts
+  function breakTie(list) {
+    if (list.length===1) return list;
+    const h2h = {};
+    list.forEach(t => { h2h[t] = h2hAmong(t, list); });
+
+    // Sort by H2H pts → H2H GD → H2H GF
+    const sorted = [...list].sort((a,b) => {
+      if (h2h[b].pts!==h2h[a].pts) return h2h[b].pts-h2h[a].pts;
+      if (h2h[b].gd!==h2h[a].gd) return h2h[b].gd-h2h[a].gd;
+      return h2h[b].gf-h2h[a].gf;
+    });
+
+    // Split into sub-groups still tied on all three H2H criteria
+    const result = [];
+    let i=0;
+    while (i<sorted.length) {
+      let j=i+1;
+      while (j<sorted.length &&
+             h2h[sorted[j]].pts===h2h[sorted[i]].pts &&
+             h2h[sorted[j]].gd===h2h[sorted[i]].gd &&
+             h2h[sorted[j]].gf===h2h[sorted[i]].gf) j++;
+      const sub = sorted.slice(i,j);
+      if (sub.length===1) {
+        result.push(sub[0]);
+      } else if (sub.length<list.length) {
+        // Partial separation — re-apply H2H among the sub-group
+        result.push(...breakTie(sub));
+      } else {
+        // No H2H separation at all — move to Step 2
+        result.push(...sortByOverall(sub));
+      }
+      i=j;
+    }
+    return result;
+  }
+
+  // Top-level sort: group by pts, then break ties within each pts group
+  const byPts = [...teams].sort((a,b) => st[b].pts-st[a].pts);
+  const final = [];
+  let i=0;
+  while (i<byPts.length) {
+    let j=i+1;
+    while (j<byPts.length && st[byPts[j]].pts===st[byPts[i]].pts) j++;
+    final.push(...breakTie(byPts.slice(i,j)));
+    i=j;
+  }
+  return final.map(t => ({team:t, ...st[t], gd: st[t].gf - st[t].ga}));
 }
 
 function getThirdPlace() {
