@@ -1331,21 +1331,26 @@ function makeConnectorPlaceholder(leftCount, toFinal) {
 }
 
 // Fill all connector placeholders with SVGs measured from the real DOM layout.
+// Each connector sits between two round columns; slot height is measured from the
+// LEFT round so each connector uses the correct per-round card height.
 function fillConnectors(wrapper) {
-  const placeholders = wrapper.querySelectorAll('.connector-placeholder');
-  if (!placeholders.length) return;
+  const rounds       = Array.from(wrapper.querySelectorAll('.bracket-round'));
+  const placeholders = Array.from(wrapper.querySelectorAll('.connector-placeholder'));
+  if (!placeholders.length || !rounds.length) return;
 
-  // Measure from the first round column's first slot
-  const firstSlot = wrapper.querySelector('.bracket-round .bracket-slot');
-  if (!firstSlot) return;
-  const slotRect = firstSlot.getBoundingClientRect();
-  if (slotRect.height === 0) return; // section hidden — skip
+  // Visibility guard — if hidden, getBCR returns 0
+  const firstSlot = rounds[0].querySelector('.bracket-slot');
+  if (!firstSlot || firstSlot.getBoundingClientRect().height === 0) return;
 
-  const headerEl = wrapper.querySelector('.bracket-round .round-header');
-  const headerH = Math.round(headerEl.getBoundingClientRect().height);
-  const slotH   = slotRect.height; // use exact (sub-pixel) value for accuracy
+  const headerH = rounds[0].querySelector('.round-header').getBoundingClientRect().height;
 
-  placeholders.forEach(ph => {
+  // placeholder[i] sits between rounds[i] and rounds[i+1]; use rounds[i] slot height
+  placeholders.forEach((ph, ci) => {
+    const leftRound = rounds[ci];
+    const leftSlot  = leftRound?.querySelector('.bracket-slot');
+    if (!leftSlot) return;
+    const slotH     = leftSlot.getBoundingClientRect().height;
+
     const leftCount = parseInt(ph.dataset.leftCount);
     const toFinal   = ph.dataset.toFinal === '1';
     const totalH    = slotH * leftCount;
