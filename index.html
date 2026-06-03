@@ -79,7 +79,7 @@ main{padding:20px;max-width:1600px;margin:0 auto}
 .round-header{text-align:center;font-size:.75rem;font-weight:700;color:var(--primary);letter-spacing:1px;text-transform:uppercase;padding:8px;margin-bottom:0;background:var(--surface2);border-radius:6px 6px 0 0;border:1px solid var(--border)}
 .round-matches{display:flex;flex-direction:column;height:1440px}
 .bracket-slot{display:flex;align-items:center;justify-content:center;padding:3px 0}
-.third-place-section{padding:12px 10px 20px;min-width:1100px}
+.third-place-section{padding:0 10px 20px;min-width:1100px;border-top:1px dashed var(--border);margin-top:8px}
 .bracket-match{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:0 8px;transition:border-color .15s}
 .bracket-match:hover{border-color:rgba(200,169,81,.4)}
 .bracket-team{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;font-size:.8rem;gap:6px;min-height:34px}
@@ -93,6 +93,11 @@ main{padding:20px;max-width:1600px;margin:0 auto}
 .bracket-score-input:disabled{opacity:.4;cursor:not-allowed}
 .bracket-divider{height:1px;background:var(--border)}
 .bracket-meta{text-align:center;font-size:.65rem;color:var(--muted);padding:3px}
+.bracket-pens{display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 8px;background:var(--surface2);border-top:1px solid var(--border);font-size:.65rem;color:var(--muted)}
+.bracket-pens span{white-space:nowrap}
+.pen-btn{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:.7rem;padding:2px 7px;cursor:pointer;transition:all .15s}
+.pen-btn:hover{border-color:var(--primary);color:var(--primary)}
+.pen-btn.pen-selected{background:var(--primary);border-color:var(--primary);color:#000;font-weight:700}
 .connector-col{width:16px;flex-shrink:0;display:flex;flex-direction:column}
 
 /* Export / Info */
@@ -1047,9 +1052,15 @@ function recomputeKnockout() {
     let winner = null, loser = null;
     if (sc && sc.h != null && sc.a != null && hTeam && aTeam) {
       const hg = +sc.h, ag = +sc.a;
-      if (!isNaN(hg) && !isNaN(ag) && hg !== ag) {
-        winner = hg > ag ? hTeam : aTeam;
-        loser = hg > ag ? aTeam : hTeam;
+      if (!isNaN(hg) && !isNaN(ag)) {
+        if (hg !== ag) {
+          winner = hg > ag ? hTeam : aTeam;
+          loser  = hg > ag ? aTeam : hTeam;
+        } else if (sc.pens === 'h') {
+          winner = hTeam; loser = aTeam;
+        } else if (sc.pens === 'a') {
+          winner = aTeam; loser = hTeam;
+        }
       }
     }
     resolved[match.id] = {h: hTeam, a: aTeam, winner, loser};
@@ -1233,8 +1244,11 @@ function makeMatchCard(match, resolved) {
   const aTeam = r.a || null;
   const sc = knockoutScores[match.id] || {};
   const canInput = !!(hTeam && aTeam);
-  const hWins = canInput && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '' && +sc.h > +sc.a;
-  const aWins = canInput && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '' && +sc.a > +sc.h;
+  const bothEntered = canInput && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
+  const isDraw = bothEntered && +sc.h === +sc.a;
+  const penWinner = sc.pens || null; // 'h' or 'a'
+  const hWins = bothEntered && (+sc.h > +sc.a || (isDraw && penWinner === 'h'));
+  const aWins = bothEntered && (+sc.a > +sc.h || (isDraw && penWinner === 'a'));
 
   const div = document.createElement('div');
   div.className = 'bracket-match';
@@ -1253,13 +1267,34 @@ function makeMatchCard(match, resolved) {
         value="${sc.a != null && sc.a !== '' ? sc.a : ''}"
         data-mid="${match.id}" data-side="a" ${canInput?'':'disabled'} placeholder="-">
     </div>
+    ${isDraw ? `<div class="bracket-pens">
+      <span>Pens:</span>
+      <button class="pen-btn${penWinner==='h'?' pen-selected':''}" data-mid="${match.id}" data-pens="h">${hTeam}</button>
+      <button class="pen-btn${penWinner==='a'?' pen-selected':''}" data-mid="${match.id}" data-pens="a">${aTeam}</button>
+    </div>` : ''}
     <div class="bracket-meta">${match.label}${match.id===104?' 🏆':match.id===103?' 🥉':''}${match.utc ? ' · ' + formatLocalTime(match.utc) : ''}</div>`;
+
+  // Penalty button listeners
+  div.querySelectorAll('.pen-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mid = +btn.dataset.mid;
+      const side = btn.dataset.pens;
+      if (!knockoutScores[mid]) knockoutScores[mid] = {h:null,a:null};
+      // Toggle off if already selected
+      knockoutScores[mid].pens = knockoutScores[mid].pens === side ? null : side;
+      recomputeKnockout();
+      renderKnockout();
+    });
+  });
+
   return div;
 }
 
 // Build a connector SVG between two rounds.
 // leftCount = number of matches in left round, totalH = round-matches height (1440)
-function makeConnectorSVG(leftCount, totalH) {
+// toFinal = true for the SF→Final connector: draws two separate arms converging to center
+//           rather than a full spine, so no line extends toward the 3rd-place section
+function makeConnectorSVG(leftCount, totalH, toFinal = false) {
   const W = 28, H = totalH;
   const slotH = H / leftCount;          // height of each left-side slot
   const pairH = slotH * 2;             // height of each pair (= right-side slot height)
@@ -1271,11 +1306,21 @@ function makeConnectorSVG(leftCount, totalH) {
     const y2   = i * pairH + slotH * 1.5;   // center of bottom match in pair
     const ymid = i * pairH + pairH * 0.5;   // center of right-side match
     const mx   = W / 2;
-    // two horizontals + vertical spine + outgoing horizontal
-    paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
-    paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
-    paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${y2}"/>`;
-    paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
+    if (toFinal) {
+      // Two independent elbows — top arm goes DOWN to ymid, bottom arm goes UP to ymid
+      // No line exists outside the ymid range, keeping the 3rd-place area visually clean
+      paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
+      paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${ymid}"/>`;
+      paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
+      paths += `<line x1="${mx}" y1="${y2}" x2="${mx}" y2="${ymid}"/>`;
+      paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
+    } else {
+      // Standard bracket: two horizontals + vertical spine + outgoing horizontal
+      paths += `<line x1="0" y1="${y1}" x2="${mx}" y2="${y1}"/>`;
+      paths += `<line x1="0" y1="${y2}" x2="${mx}" y2="${y2}"/>`;
+      paths += `<line x1="${mx}" y1="${y1}" x2="${mx}" y2="${y2}"/>`;
+      paths += `<line x1="${mx}" y1="${ymid}" x2="${W}" y2="${ymid}"/>`;
+    }
   }
 
   // The connector wraps in a div to match the column structure (header + matches)
@@ -1309,7 +1354,8 @@ function renderKnockout() {
     // Connector from previous round
     if (ri > 0) {
       const prevCount = BRACKET_DISPLAY[ri - 1].ids.length;
-      wrapper.appendChild(makeConnectorSVG(prevCount, BRACKET_H));
+      const toFinal = round.ids[0] === 104; // SF→Final: use two-arm style
+      wrapper.appendChild(makeConnectorSVG(prevCount, BRACKET_H, toFinal));
     }
 
     // Round column
