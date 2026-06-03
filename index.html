@@ -123,6 +123,31 @@ main{padding:20px;max-width:1600px;margin:0 auto}
 .flag{font-size:1rem;line-height:1}
 .clear-btn{font-size:.7rem;color:var(--muted);cursor:pointer;border:none;background:none;padding:2px 6px;border-radius:3px}
 .clear-btn:hover{color:var(--red)}
+
+/* Awards / Jokers / Elimination sections */
+.award-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:700px){.award-grid{grid-template-columns:1fr}}
+.award-field label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:5px;font-weight:500}
+.award-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.85rem;padding:8px 10px;font-family:inherit;transition:border-color .15s}
+.award-input:focus{outline:none;border-color:var(--primary)}
+.award-input::placeholder{color:var(--muted)}
+.joker-list{display:flex;flex-direction:column;gap:8px}
+.joker-slot{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px}
+.joker-num{font-size:.75rem;font-weight:700;color:var(--primary);min-width:18px;text-align:center}
+.joker-select{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:.8rem;padding:5px 8px;font-family:inherit;cursor:pointer}
+.joker-select:focus{outline:none;border-color:var(--primary)}
+.joker-remove{background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:0 4px;line-height:1}
+.joker-remove:hover{color:var(--red)}
+.joker-add{margin-top:6px;font-size:.8rem}
+.elim-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.elim-table th{padding:6px 10px;text-align:left;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border)}
+.elim-table th:last-child{text-align:center}
+.elim-table td{padding:5px 10px;border-bottom:1px solid rgba(42,63,90,.4)}
+.elim-table tr:last-child td{border-bottom:none}
+.elim-team-cell{display:flex;align-items:center;gap:6px}
+.elim-select{background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:.78rem;padding:4px 6px;font-family:inherit;cursor:pointer}
+.elim-select:focus{outline:none;border-color:var(--primary)}
+.elim-empty{color:var(--muted);font-style:italic;font-size:.82rem;padding:10px 0}
 </style>
 </head>
 <body>
@@ -167,6 +192,34 @@ main{padding:20px;max-width:1600px;margin:0 auto}
           <tbody id="third-place-table"></tbody>
         </table>
         <p class="notice">The exact slot assignment for 3rd-place teams follows FIFA's 495-scenario table based on which groups qualify. This app assigns them in ranking order to the 8 available slots.</p>
+      </div>
+      <div class="card">
+        <h3>🏅 Tournament Awards</h3>
+        <div class="award-grid">
+          <div class="award-field">
+            <label>🥾 Golden Boot — Top Scorer</label>
+            <input class="award-input" id="award-topScorer" type="text" placeholder="Player name…" oninput="onAwardInput()">
+          </div>
+          <div class="award-field">
+            <label>⚽ Golden Ball — Best Player</label>
+            <input class="award-input" id="award-bestPlayer" type="text" placeholder="Player name…" oninput="onAwardInput()">
+          </div>
+          <div class="award-field">
+            <label>🧤 Golden Glove — Best Goalkeeper</label>
+            <input class="award-input" id="award-bestGoalkeeper" type="text" placeholder="Player name…" oninput="onAwardInput()">
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🟥 Red Card Jokers</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Flag up to 5 matches where you predict a red card will be shown.</p>
+        <div class="joker-list" id="joker-list"></div>
+        <button class="btn btn-ghost joker-add" id="joker-add-btn" onclick="addJoker()">+ Add joker</button>
+      </div>
+      <div class="card">
+        <h3>📊 Elimination Predictions</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Auto-filled from your bracket — override if needed. Only knockout teams shown.</p>
+        <div id="elim-container"></div>
       </div>
       <div class="card">
         <h3>Export</h3>
@@ -346,6 +399,9 @@ const ALL_KO = [...R32,...R16,...QF,...SF,THIRD_PLACE,FINAL];
 let groupScores = {}; // {fixtureId: {h,a}}
 let knockoutScores = {}; // {matchId: {h,a}}
 let knockoutTeams = {}; // {matchId: {h:team,a:team}} — stored to detect changes
+let tournamentAwards = {}; // {topScorer, bestPlayer, bestGoalkeeper}
+let redCardJokers = []; // [{matchId, home, away}]
+let eliminationOverrides = {}; // {teamName: roundLabel} — user overrides
 
 function loadState() {
   try {
@@ -353,13 +409,17 @@ function loadState() {
     groupScores = s.groupScores || {};
     knockoutScores = s.knockoutScores || {};
     knockoutTeams = s.knockoutTeams || {};
+    tournamentAwards = s.tournamentAwards || {};
+    redCardJokers = s.redCardJokers || [];
+    eliminationOverrides = s.eliminationOverrides || {};
   } catch(e) {
     groupScores = {}; knockoutScores = {}; knockoutTeams = {};
+    tournamentAwards = {}; redCardJokers = []; eliminationOverrides = {};
   }
 }
 
 function saveState() {
-  localStorage.setItem('wc2026', JSON.stringify({groupScores, knockoutScores, knockoutTeams}));
+  localStorage.setItem('wc2026', JSON.stringify({groupScores, knockoutScores, knockoutTeams, tournamentAwards, redCardJokers, eliminationOverrides}));
 }
 
 // ===================== FIFA WORLD RANKINGS (April 2026) =====================
@@ -1524,6 +1584,194 @@ function onKoInput(e) {
 
 // ===================== EXPORT TAB =====================
 
+// ===================== AWARDS =====================
+function onAwardInput() {
+  tournamentAwards = {
+    topScorer: document.getElementById('award-topScorer').value.trim(),
+    bestPlayer: document.getElementById('award-bestPlayer').value.trim(),
+    bestGoalkeeper: document.getElementById('award-bestGoalkeeper').value.trim(),
+  };
+  saveState();
+}
+
+function renderAwards() {
+  document.getElementById('award-topScorer').value = tournamentAwards.topScorer || '';
+  document.getElementById('award-bestPlayer').value = tournamentAwards.bestPlayer || '';
+  document.getElementById('award-bestGoalkeeper').value = tournamentAwards.bestGoalkeeper || '';
+}
+
+// ===================== RED CARD JOKERS =====================
+function matchLabel(matchId, resolved) {
+  const id = +matchId;
+  const grpFix = FIXTURES.find(f => f.id === id);
+  if (grpFix) {
+    const rnd = grpFix.sim ? 'GS (MD3)' : 'Group ' + grpFix.g;
+    return `#${id} · ${rnd} · ${grpFix.h} vs ${grpFix.a}`;
+  }
+  const koFix = ALL_KO.find(m => m.id === id);
+  if (!koFix) return `Match #${id}`;
+  const r = resolved[id] || {};
+  const hName = r.h || `[${koFix.label} H]`;
+  const aName = r.a || `[${koFix.label} A]`;
+  return `#${id} · ${koFix.label} · ${hName} vs ${aName}`;
+}
+
+function buildMatchOptions(resolved, selectedId) {
+  let opts = '';
+  opts += '<option value="">— select match —</option>';
+  // Group fixtures
+  opts += '<optgroup label="Group Stage">';
+  FIXTURES.forEach(f => {
+    const sel = f.id === +selectedId ? ' selected' : '';
+    opts += `<option value="${f.id}"${sel}>#${f.id} · Grp ${f.g} · ${f.h} vs ${f.a}</option>`;
+  });
+  opts += '</optgroup>';
+  // KO rounds
+  const roundGroups = [
+    {label:'Round of 32', matches: R32},
+    {label:'Round of 16', matches: R16},
+    {label:'Quarter-Finals', matches: QF},
+    {label:'Semi-Finals', matches: SF},
+    {label:'3rd Place', matches: [THIRD_PLACE]},
+    {label:'Final', matches: [FINAL]},
+  ];
+  roundGroups.forEach(rg => {
+    opts += `<optgroup label="${rg.label}">`;
+    rg.matches.forEach(m => {
+      const r = resolved[m.id] || {};
+      const hName = r.h || `TBD`;
+      const aName = r.a || `TBD`;
+      const sel = m.id === +selectedId ? ' selected' : '';
+      opts += `<option value="${m.id}"${sel}>#${m.id} · ${hName} vs ${aName}</option>`;
+    });
+    opts += '</optgroup>';
+  });
+  return opts;
+}
+
+function renderJokers(resolved) {
+  const list = document.getElementById('joker-list');
+  const addBtn = document.getElementById('joker-add-btn');
+  list.innerHTML = '';
+  redCardJokers.forEach((joker, idx) => {
+    const div = document.createElement('div');
+    div.className = 'joker-slot';
+    div.innerHTML = `
+      <span class="joker-num">${idx + 1}</span>
+      <select class="joker-select" data-idx="${idx}" onchange="onJokerChange(this)">
+        ${buildMatchOptions(resolved, joker.matchId)}
+      </select>
+      <button class="joker-remove" onclick="removeJoker(${idx})" title="Remove">✕</button>`;
+    list.appendChild(div);
+  });
+  addBtn.disabled = redCardJokers.length >= 5;
+  addBtn.style.opacity = redCardJokers.length >= 5 ? '0.4' : '1';
+}
+
+function addJoker() {
+  if (redCardJokers.length >= 5) return;
+  redCardJokers.push({matchId: null, home: null, away: null});
+  saveState();
+  const resolved = recomputeKnockout();
+  renderJokers(resolved);
+}
+
+function removeJoker(idx) {
+  redCardJokers.splice(idx, 1);
+  saveState();
+  const resolved = recomputeKnockout();
+  renderJokers(resolved);
+}
+
+function onJokerChange(sel) {
+  const idx = +sel.dataset.idx;
+  const mid = sel.value === '' ? null : +sel.value;
+  // Check for duplicates
+  if (mid !== null && redCardJokers.some((j, i) => i !== idx && j.matchId === mid)) {
+    sel.value = redCardJokers[idx]?.matchId || '';
+    return;
+  }
+  if (mid === null) {
+    redCardJokers[idx] = {matchId: null, home: null, away: null};
+  } else {
+    const resolved = recomputeKnockout();
+    const r = resolved[mid] || {};
+    const grpFix = FIXTURES.find(f => f.id === mid);
+    let home = null, away = null;
+    if (grpFix) { home = grpFix.h; away = grpFix.a; }
+    else { home = r.h || null; away = r.a || null; }
+    redCardJokers[idx] = {matchId: mid, home, away};
+  }
+  saveState();
+}
+
+// ===================== ELIMINATION PREDICTIONS =====================
+const ELIM_ROUNDS = ['R32','R16','QF','SF','Final','Winner'];
+const ROUND_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-Final',SF:'Semi-Final',Final:'Final',Winner:'🏆 Winner'};
+
+// Derive each team's auto elimination round from the bracket
+function computeAutoElim(resolved) {
+  const elim = {}; // {team: round}
+  // Losers of R32-SF = eliminated in that round
+  [...R32,...R16,...QF,...SF].forEach(m => {
+    const r = resolved[m.id] || {};
+    if (r.loser) elim[r.loser] = m.label; // m.label is 'R32','R16','QF','SF'
+  });
+  // Final loser = eliminated in 'Final'
+  const fr = resolved[104] || {};
+  if (fr.loser) elim[fr.loser] = 'Final';
+  // Champion = 'Winner'
+  if (fr.winner) elim[fr.winner] = 'Winner';
+  return elim;
+}
+
+// All teams that won at least one match in 73-102 (unique, in bracket order)
+function getKoTeams(resolved) {
+  const seen = new Set();
+  const teams = [];
+  [...R32,...R16,...QF,...SF].forEach(m => {
+    const r = resolved[m.id] || {};
+    if (r.winner && !seen.has(r.winner)) { seen.add(r.winner); teams.push(r.winner); }
+  });
+  return teams;
+}
+
+function renderEliminations(resolved) {
+  const container = document.getElementById('elim-container');
+  const teams = getKoTeams(resolved);
+  if (!teams.length) {
+    container.innerHTML = '<p class="elim-empty">Fill in the knockout bracket to see elimination predictions.</p>';
+    return;
+  }
+  const autoElim = computeAutoElim(resolved);
+  let html = '<table class="elim-table"><thead><tr><th>Team</th><th style="text-align:center">Eliminated in</th></tr></thead><tbody>';
+  teams.forEach(team => {
+    const autoRound = autoElim[team] || '';
+    const storedRound = eliminationOverrides[team] || '';
+    const round = storedRound || autoRound;
+    const opts = `<option value=""${!round?' selected':''}>— auto —</option>` +
+      ELIM_ROUNDS.map(r => `<option value="${r}"${round===r?' selected':''}>${ROUND_LABELS[r]||r}</option>`).join('');
+    const isChamp = round === 'Winner';
+    html += `<tr${isChamp?' style="opacity:.6"':''}>
+      <td><div class="elim-team-cell">${FLAGS[team]||''} <span>${team}</span></div></td>
+      <td style="text-align:center"><select class="elim-select" data-team="${team}" onchange="onElimChange(this)">${opts}</select></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function onElimChange(sel) {
+  const team = sel.dataset.team;
+  if (sel.value === '') {
+    delete eliminationOverrides[team];
+  } else {
+    eliminationOverrides[team] = sel.value;
+  }
+  saveState();
+}
+
+// ===================== UPDATE EXPORT =====================
 function updateExport() {
   const groupFilled = Object.keys(groupScores).filter(id => {
     const sc = groupScores[id];
@@ -1574,6 +1822,11 @@ function updateExport() {
       <td>${t.gf}</td>
       <td>${i<8?'<span style="color:var(--green)">Qualifies</span>':'<span style="color:var(--muted)">Eliminated</span>'}</td>
     </tr>`).join('');
+
+  // New sections
+  renderAwards();
+  renderJokers(finalRes);
+  renderEliminations(finalRes);
 }
 
 function updateProgress() {
@@ -1602,6 +1855,27 @@ function exportData() {
     };
   });
 
+  // Build elimination predictions: teams knocked out in R32-SF, with round
+  const autoElim = computeAutoElim(resolved);
+  const teams = getKoTeams(resolved);
+  const eliminationPredictions = teams
+    .map(team => {
+      const round = eliminationOverrides[team] || autoElim[team] || null;
+      // Include only if round is one of R32-SF (not Final, not Winner, not null)
+      const koRounds = ['R32','R16','QF','SF'];
+      return round && koRounds.includes(round) ? {team, round} : null;
+    })
+    .filter(Boolean);
+
+  // Build awards (only include non-empty fields)
+  const awards = {};
+  if (tournamentAwards.topScorer) awards.topScorer = tournamentAwards.topScorer;
+  if (tournamentAwards.bestPlayer) awards.bestPlayer = tournamentAwards.bestPlayer;
+  if (tournamentAwards.bestGoalkeeper) awards.bestGoalkeeper = tournamentAwards.bestGoalkeeper;
+
+  // Build jokers (only include valid entries with a matchId)
+  const jokers = redCardJokers.filter(j => j.matchId != null);
+
   const data = {
     exported: new Date().toISOString(),
     groupScores,
@@ -1610,6 +1884,9 @@ function exportData() {
     knockoutResults: koResults,
     champion: koResults[104]?.winner || null,
     thirdPlaceWinner: koResults[103]?.winner || null,
+    ...(Object.keys(awards).length ? awards : {}),
+    redCardJokers: jokers,
+    eliminationPredictions,
   };
 
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
