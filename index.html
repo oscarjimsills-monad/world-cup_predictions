@@ -1380,109 +1380,126 @@ function fillConnectors(wrapper) {
   });
 }
 
+// Align R16/QF/SF/Final cards so each sits at the midpoint of its two feeder cards.
+// Also places the 3rd-place card in the Final column, one card-height below the Final.
+// Must be called inside a RAF after the initial flex layout has been painted.
+function alignBracketCards(wrapper, resolved) {
+  const rounds = Array.from(wrapper.querySelectorAll('.bracket-round'));
+  if (!rounds.length || rounds[0].getBoundingClientRect().height === 0) return;
+
+  // Use R32's natural round-matches height as the shared container height
+  const r32H = rounds[0].querySelector('.round-matches').getBoundingClientRect().height;
+
+  for (let ri = 1; ri < rounds.length; ri++) {
+    const prevCards  = Array.from(rounds[ri - 1].querySelectorAll('.bracket-match'));
+    const currRound  = rounds[ri];
+    const currSlots  = Array.from(currRound.querySelectorAll('.bracket-slot'));
+    const matchesDiv = currRound.querySelector('.round-matches');
+
+    // Switch to absolute positioning so cards sit at exact midpoints
+    matchesDiv.style.cssText = `position:relative;height:${r32H}px;overflow:visible`;
+
+    const matchesTop = matchesDiv.getBoundingClientRect().top;
+    const pairs = prevCards.length / 2;
+
+    for (let i = 0; i < Math.min(pairs, currSlots.length); i++) {
+      const c1   = prevCards[i * 2];
+      const c2   = prevCards[i * 2 + 1];
+      const slot = currSlots[i];
+      const card = slot?.querySelector('.bracket-match');
+      if (!c1 || !c2 || !slot || !card) continue;
+
+      const r1   = c1.getBoundingClientRect();
+      const r2   = c2.getBoundingClientRect();
+      const midY = (r1.top + r1.height / 2 + r2.top + r2.height / 2) / 2;
+      const cardH = card.getBoundingClientRect().height;
+      const topPx = midY - matchesTop - cardH / 2;
+
+      slot.style.cssText = `position:absolute;top:${topPx}px;left:0;right:0;display:block;padding:0`;
+    }
+
+    // Final column: add 3rd-place card one card-height below the Final card
+    if (ri === rounds.length - 1 && currSlots.length > 0) {
+      const finalCard = currSlots[0]?.querySelector('.bracket-match');
+      if (finalCard) {
+        const finalRect = finalCard.getBoundingClientRect();
+        const cardH     = finalRect.height;
+        const tpTop     = finalRect.bottom - matchesTop + cardH; // one-card gap
+
+        const tpSlot = document.createElement('div');
+        tpSlot.style.cssText = `position:absolute;top:${tpTop}px;left:0;right:0;display:block;padding:0`;
+
+        const tpHdr = document.createElement('div');
+        tpHdr.style.cssText = 'text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--surface2);border:1px solid var(--border);border-radius:6px 6px 0 0;padding:8px;margin:0 8px 0';
+        tpHdr.textContent = '🥉 3rd Place';
+        tpSlot.appendChild(tpHdr);
+
+        const tpCard = makeMatchCard(THIRD_PLACE, resolved);
+        tpCard.style.cssText = 'margin:0 8px;border-radius:0 0 8px 8px;border-top:none';
+        tpSlot.appendChild(tpCard);
+
+        tpSlot.querySelectorAll('.bracket-score-input').forEach(inp => inp.addEventListener('input', onKoInput));
+        tpSlot.querySelectorAll('.pen-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const mid = +btn.dataset.mid, side = btn.dataset.pens;
+            if (!knockoutScores[mid]) knockoutScores[mid] = {h:null,a:null};
+            knockoutScores[mid].pens = knockoutScores[mid].pens === side ? null : side;
+            recomputeKnockout(); renderKnockout();
+          });
+        });
+
+        matchesDiv.appendChild(tpSlot);
+      }
+    }
+  }
+
+  // 3rd-place is now inside the Final column — clear the old separate section
+  const tpSection = document.getElementById('third-place-section');
+  if (tpSection) tpSection.innerHTML = '';
+}
+
 let _tpRafId = null;
 function renderKnockout() {
   if (_tpRafId !== null) { cancelAnimationFrame(_tpRafId); _tpRafId = null; }
   const resolved = recomputeKnockout();
   const getMatch = id => ALL_KO.find(m => m.id === id);
 
-  // Main bracket
   const wrapper = document.getElementById('bracket-wrapper');
   wrapper.innerHTML = '';
 
   BRACKET_DISPLAY.forEach((round, ri) => {
-    // Connector placeholder — filled with real SVG after DOM measurement
     if (ri > 0) {
       const prevCount = BRACKET_DISPLAY[ri - 1].ids.length;
       const toFinal = round.ids[0] === 104;
       wrapper.appendChild(makeConnectorPlaceholder(prevCount, toFinal));
     }
 
-    // Round column
     const col = document.createElement('div');
     col.className = 'bracket-round';
+    const label = round.ids[0] === 104 ? '🏆 Final' : round.label;
+    col.innerHTML = `<div class="round-header">${label}</div>`;
 
-    if (round.ids[0] === 104) {
-      // Final column: normal full-height slot so SF connector aligns correctly
-      col.innerHTML = `<div class="round-header">🏆 Final</div>`;
-      const matchesDiv = document.createElement('div');
-      matchesDiv.className = 'round-matches';
-      const finalSlot = document.createElement('div');
-      finalSlot.className = 'bracket-slot';
-      finalSlot.style.flex = round.flex;
-      finalSlot.appendChild(makeMatchCard(getMatch(104), resolved));
-      matchesDiv.appendChild(finalSlot);
-      col.appendChild(matchesDiv);
-    } else {
-      col.innerHTML = `<div class="round-header">${round.label}</div>`;
-      const matchesDiv = document.createElement('div');
-      matchesDiv.className = 'round-matches';
-      round.ids.forEach(id => {
-        const slot = document.createElement('div');
-        slot.className = 'bracket-slot';
-        slot.style.flex = round.flex;
-        slot.appendChild(makeMatchCard(getMatch(id), resolved));
-        matchesDiv.appendChild(slot);
-      });
-      col.appendChild(matchesDiv);
-    }
-
+    const matchesDiv = document.createElement('div');
+    matchesDiv.className = 'round-matches';
+    round.ids.forEach(id => {
+      const slot = document.createElement('div');
+      slot.className = 'bracket-slot';
+      slot.style.flex = round.flex; // initial flex layout; overridden by alignBracketCards
+      slot.appendChild(makeMatchCard(getMatch(id), resolved));
+      matchesDiv.appendChild(slot);
+    });
+    col.appendChild(matchesDiv);
     wrapper.appendChild(col);
   });
 
-  // 3rd place section — rendered below bracket, aligned under Finals column
-  const tpSection = document.getElementById('third-place-section');
-  tpSection.innerHTML = '';
-
-  function buildThirdPlaceSection() {
-    const finalCol = wrapper.querySelector('.bracket-round:last-child');
-    const scrollContainer = document.getElementById('bracket-scroll-container');
-    // Only render if section is visible (getBoundingClientRect gives real values)
-    const finalRect = finalCol.getBoundingClientRect();
-    if (finalRect.width === 0) return; // section hidden (display:none), skip
-
-    const containerRect = scrollContainer.getBoundingClientRect();
-    const leftOffset = finalRect.left - containerRect.left + scrollContainer.scrollLeft;
-
-    const TP_PAD = 10;
-    tpSection.innerHTML = '';
-    tpSection.style.cssText = `padding:0 ${TP_PAD}px 24px;min-width:${Math.round(leftOffset + 210 + TP_PAD)}px`;
-
-    const spacer = document.createElement('div');
-    spacer.style.cssText = `display:inline-block;width:${Math.round(leftOffset - TP_PAD)}px;flex-shrink:0`;
-    tpSection.appendChild(spacer);
-
-    const tpWrap = document.createElement('div');
-    tpWrap.style.cssText = 'display:inline-block;width:210px;vertical-align:top';
-
-    const tpHdr = document.createElement('div');
-    tpHdr.style.cssText = 'text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--surface2);border:1px solid var(--border);border-radius:6px 6px 0 0;padding:8px;margin-bottom:0';
-    tpHdr.textContent = '🥉 3rd Place Playoff';
-    tpWrap.appendChild(tpHdr);
-
-    const tpCard = makeMatchCard(THIRD_PLACE, resolved);
-    tpCard.style.margin = '0';
-    tpCard.style.borderRadius = '0 0 8px 8px';
-    tpCard.style.borderTop = 'none';
-    tpWrap.appendChild(tpCard);
-    tpSection.appendChild(tpWrap);
-
-    tpSection.querySelectorAll('.bracket-score-input').forEach(inp => {
-      inp.addEventListener('input', onKoInput);
-    });
-  }
-
-  // Try immediately (works when section is already visible)
-  // Fall back to RAF for the tab-switch case where layout hasn't painted yet
   if (document.getElementById('knockout-section').classList.contains('active')) {
     _tpRafId = requestAnimationFrame(() => {
       _tpRafId = null;
+      alignBracketCards(wrapper, resolved);
       fillConnectors(wrapper);
-      buildThirdPlaceSection();
     });
   }
 
-  // Attach KO event listeners
   document.querySelectorAll('.bracket-score-input').forEach(inp => {
     inp.addEventListener('input', onKoInput);
   });
