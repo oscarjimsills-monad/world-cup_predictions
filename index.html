@@ -148,6 +148,20 @@ main{padding:20px;max-width:1600px;margin:0 auto}
 .elim-select{background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:.78rem;padding:4px 6px;font-family:inherit;cursor:pointer}
 .elim-select:focus{outline:none;border-color:var(--primary)}
 .elim-empty{color:var(--muted);font-style:italic;font-size:.82rem;padding:10px 0}
+
+/* Scoring Guide */
+.scoring-section{max-width:700px;margin:0 auto;padding:20px 0}
+.scoring-table{width:100%;border-collapse:collapse;font-size:.83rem;margin-top:4px}
+.scoring-table th{padding:7px 10px;text-align:left;color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border)}
+.scoring-table th:last-child,.scoring-table td:last-child{text-align:right}
+.scoring-table td{padding:7px 10px;border-bottom:1px solid rgba(42,63,90,.4);line-height:1.4}
+.scoring-table tr:last-child td{border-bottom:none}
+.scoring-table tr:hover td{background:rgba(200,169,81,.04)}
+.pts-badge{display:inline-block;background:rgba(200,169,81,.15);color:var(--primary);border:1px solid rgba(200,169,81,.35);border-radius:5px;padding:1px 8px;font-weight:700;font-size:.82rem;white-space:nowrap}
+.pts-badge.bonus{background:rgba(76,175,128,.12);color:var(--green);border-color:rgba(76,175,128,.3)}
+.pts-badge.big{background:rgba(200,169,81,.25);font-size:.9rem;padding:2px 10px}
+.scoring-divider{height:1px;background:var(--border);margin:18px 0}
+.card-subtitle{font-size:.78rem;color:var(--muted);margin-bottom:12px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -163,6 +177,7 @@ main{padding:20px;max-width:1600px;margin:0 auto}
   <div class="tab active" data-tab="groups" onclick="showTab('groups')">Group Stage</div>
   <div class="tab" data-tab="knockout" onclick="showTab('knockout')">Knockout Bracket</div>
   <div class="tab" data-tab="export" onclick="showTab('export')">Standings & Export</div>
+  <div class="tab" data-tab="scoring" onclick="showTab('scoring')">Scoring Guide</div>
 </nav>
 <main>
   <div id="groups-section" class="section active">
@@ -226,6 +241,112 @@ main{padding:20px;max-width:1600px;margin:0 auto}
         <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px">Download all prediction data — scores, group standings, bracket results — as a JSON file.</p>
         <button class="btn btn-primary" onclick="exportData()" style="width:100%">⬇ Download Predictions JSON</button>
       </div>
+    </div>
+  </div>
+  <div id="scoring-section" class="section">
+    <div class="scoring-section">
+
+      <div class="card">
+        <h3>⚽ Group Stage</h3>
+        <p class="card-subtitle">Applies to all 72 group fixtures (matchdays 1–3 in each group).</p>
+        <table class="scoring-table">
+          <thead><tr><th>Prediction</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td>Exact scoreline (e.g. 2–1, correct for both teams)</td><td><span class="pts-badge big">3 pts</span></td></tr>
+            <tr><td>Correct outcome only (win / draw / loss)</td><td><span class="pts-badge">1 pt</span></td></tr>
+          </tbody>
+        </table>
+        <div class="scoring-divider"></div>
+        <table class="scoring-table">
+          <thead><tr><th>Group bonus (per group)</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td>Correct group winner (1st place)</td><td><span class="pts-badge">1 pt</span></td></tr>
+            <tr><td>All 4 positions correct — replaces the 1 pt above</td><td><span class="pts-badge big">3 pts</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>🏆 Knockout Rounds — R32 through Semi-Finals</h3>
+        <p class="card-subtitle">Applies to matches 73–102. Penalty shootout predictions count.</p>
+        <table class="scoring-table">
+          <thead><tr><th>Prediction</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td>Exact scoreline <em>and</em> right opponent</td><td><span class="pts-badge big">4 pts</span></td></tr>
+            <tr><td>Exact scoreline, wrong penalty winner, right opponent</td><td><span class="pts-badge">2 pts</span></td></tr>
+            <tr><td>Correct winner, right opponent</td><td><span class="pts-badge">2 pts</span></td></tr>
+            <tr><td>Correct winner, wrong opponent</td><td><span class="pts-badge">1 pt</span></td></tr>
+            <tr><td style="color:var(--green)">+ Predicted the loser to be eliminated in this exact round<br><span style="font-size:.75rem;color:var(--muted)">(bonus — stacks with any row above)</span></td><td><span class="pts-badge bonus">+1 pt</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>🥇 Final</h3>
+        <p class="card-subtitle">Match 104. Same structure as knockout rounds but with higher point values.</p>
+        <table class="scoring-table">
+          <thead><tr><th>Prediction</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td>Exact scoreline <em>and</em> right opponent</td><td><span class="pts-badge big">7 pts</span></td></tr>
+            <tr><td>Exact scoreline, wrong penalty winner, right opponent</td><td><span class="pts-badge big">5 pts</span></td></tr>
+            <tr><td>Correct winner, right opponent</td><td><span class="pts-badge big">5 pts</span></td></tr>
+            <tr><td>Correct winner, wrong opponent</td><td><span class="pts-badge">2 pts</span></td></tr>
+            <tr><td style="color:var(--green)">+ Predicted the runner-up to lose in the Final<br><span style="font-size:.75rem;color:var(--muted)">(bonus — stacks with any row above)</span></td><td><span class="pts-badge bonus">+1 pt</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>🎖️ Tournament Predictions</h3>
+        <p class="card-subtitle">Scored from your pre-tournament bracket picks and award predictions.</p>
+        <table class="scoring-table">
+          <thead><tr><th>Prediction</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td>🏆 Tournament champion</td><td><span class="pts-badge big">5 pts</span></td></tr>
+            <tr><td>🥉 Third place winner</td><td><span class="pts-badge big">5 pts</span></td></tr>
+            <tr><td>🥾 Golden Boot — correct top scorer</td><td><span class="pts-badge">3 pts</span></td></tr>
+            <tr><td>⚽ Golden Ball — correct best player</td><td><span class="pts-badge">3 pts</span></td></tr>
+            <tr><td>🧤 Golden Glove — correct best goalkeeper</td><td><span class="pts-badge">3 pts</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>🟥 Red Card Jokers</h3>
+        <p class="card-subtitle">Pick up to 5 matches where you predict a red card will be shown. Both teams must match exactly.</p>
+        <table class="scoring-table">
+          <thead><tr><th>Outcome</th><th>Points</th></tr></thead>
+          <tbody>
+            <tr><td>Red card shown in your predicted match (both teams correct)</td><td><span class="pts-badge big">10 pts</span></td></tr>
+            <tr><td>No red card shown, or wrong match</td><td><span class="pts-badge" style="background:rgba(224,85,85,.1);color:var(--red);border-color:rgba(224,85,85,.3)">0 pts</span></td></tr>
+          </tbody>
+        </table>
+        <div class="scoring-divider"></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div class="summary-stat" style="flex:1;min-width:120px"><div class="stat-val">50</div><div class="stat-label">Max possible from jokers</div></div>
+          <div class="summary-stat" style="flex:1;min-width:120px"><div class="stat-val">5</div><div class="stat-label">Joker slots available</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📊 Maximum Points Summary</h3>
+        <table class="scoring-table">
+          <thead><tr><th>Category</th><th>Max pts</th></tr></thead>
+          <tbody>
+            <tr><td>Group stage — scorelines (72 × 3)</td><td><span class="pts-badge">216</span></td></tr>
+            <tr><td>Group stage — group winners (12 × 1)</td><td><span class="pts-badge">12</span></td></tr>
+            <tr><td>Group stage — perfect groups (12 × 3, replaces above)</td><td><span class="pts-badge">36</span></td></tr>
+            <tr><td>Knockout R32–SF scorelines (30 × 4)</td><td><span class="pts-badge">120</span></td></tr>
+            <tr><td>Knockout R32–SF elimination bonuses (30 × 1)</td><td><span class="pts-badge">30</span></td></tr>
+            <tr><td>Final (7 + 1 bonus)</td><td><span class="pts-badge">8</span></td></tr>
+            <tr><td>Tournament predictions (5+5+3+3+3)</td><td><span class="pts-badge">19</span></td></tr>
+            <tr><td>Red card jokers (5 × 10)</td><td><span class="pts-badge">50</span></td></tr>
+            <tr style="border-top:2px solid var(--border)"><td style="font-weight:700;color:var(--primary)">Grand total (perfect score)</td><td><span class="pts-badge big">481</span></td></tr>
+          </tbody>
+        </table>
+        <p class="notice" style="margin-top:12px">The perfect group bonus (3 pts) replaces the group winner bonus (1 pt), so the true max group stage total is 216 + 36 = 252 pts.</p>
+      </div>
+
     </div>
   </div>
 </main>
