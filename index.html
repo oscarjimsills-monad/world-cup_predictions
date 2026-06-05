@@ -162,22 +162,36 @@ main{padding:20px;max-width:1600px;margin:0 auto}
 .pts-badge.big{background:rgba(200,169,81,.25);font-size:.9rem;padding:2px 10px}
 .scoring-divider{height:1px;background:var(--border);margin:18px 0}
 .card-subtitle{font-size:.78rem;color:var(--muted);margin-bottom:12px;line-height:1.5}
+
+/* Language Modal */
+.lang-modal-overlay{position:fixed;inset:0;background:rgba(13,27,42,.95);z-index:9999;display:flex;align-items:center;justify-content:center}
+.lang-modal-overlay.hidden{display:none}
+.lang-modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:36px 40px;text-align:center;max-width:420px;width:90%}
+.lang-modal h2{color:var(--primary);font-size:1.5rem;margin-bottom:8px}
+.lang-modal p{color:var(--muted);font-size:.9rem;margin-bottom:28px;line-height:1.6}
+.lang-btn-row{display:flex;gap:14px;justify-content:center}
+.lang-choice-btn{flex:1;background:var(--surface2);border:2px solid var(--border);border-radius:10px;padding:18px 14px;cursor:pointer;color:var(--text);font-family:inherit;font-size:1rem;font-weight:600;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.lang-choice-btn:hover{border-color:var(--primary);color:var(--primary)}
+.lang-choice-btn .lang-flag{font-size:2rem;line-height:1}
+.lang-toggle-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:inherit;font-size:.8rem;padding:5px 10px;cursor:pointer;transition:all .15s}
+.lang-toggle-btn:hover{border-color:var(--primary);color:var(--primary)}
 </style>
 </head>
 <body>
 <header>
   <div class="logo">⚽ 2026 FIFA World Cup <span>Predictions</span></div>
   <div class="header-actions">
-    <div class="progress-pill">Group matches: <b id="progress-count">0/72</b></div>
-    <button class="btn btn-ghost" onclick="showTab('export')">📊 Export</button>
-    <button class="btn btn-primary" onclick="exportData()">⬇ Download</button>
+    <div class="progress-pill"><span data-i18n="progressLabel">Group matches:</span> <b id="progress-count">0/72</b></div>
+    <button class="lang-toggle-btn" onclick="openLangModal()" id="lang-toggle-btn">🇬🇧 EN</button>
+    <button class="btn btn-ghost" onclick="showTab('export')" data-i18n-btn="exportBtn">📊 Export</button>
+    <button class="btn btn-primary" onclick="exportData()" data-i18n-btn="downloadBtn">⬇ Download</button>
   </div>
 </header>
 <nav>
-  <div class="tab active" data-tab="groups" onclick="showTab('groups')">Group Stage</div>
-  <div class="tab" data-tab="knockout" onclick="showTab('knockout')">Knockout Bracket</div>
-  <div class="tab" data-tab="export" onclick="showTab('export')">Standings & Export</div>
-  <div class="tab" data-tab="scoring" onclick="showTab('scoring')">Scoring Guide</div>
+  <div class="tab active" data-tab="groups" onclick="showTab('groups')" data-i18n="tabGroups">Group Stage</div>
+  <div class="tab" data-tab="knockout" onclick="showTab('knockout')" data-i18n="tabKnockout">Knockout Bracket</div>
+  <div class="tab" data-tab="export" onclick="showTab('export')" data-i18n="tabExport">Standings & Export</div>
+  <div class="tab" data-tab="scoring" onclick="showTab('scoring')" data-i18n="tabScoring">Scoring Guide</div>
 </nav>
 <main>
   <div id="groups-section" class="section active">
@@ -192,166 +206,471 @@ main{padding:20px;max-width:1600px;margin:0 auto}
   <div id="export-section" class="section">
     <div class="export-section">
       <div class="card">
-        <h3>Progress Summary</h3>
+        <h3 data-i18n="progressTitle">Progress Summary</h3>
         <div class="summary-grid">
-          <div class="summary-stat"><div class="stat-val" id="exp-group-filled">0/72</div><div class="stat-label">Group Matches Filled</div></div>
-          <div class="summary-stat"><div class="stat-val" id="exp-ko-filled">0/31</div><div class="stat-label">Knockout Matches Filled</div></div>
-          <div class="summary-stat"><div class="stat-val" id="exp-winner">—</div><div class="stat-label">Predicted Champion</div></div>
-          <div class="summary-stat"><div class="stat-val" id="exp-third">—</div><div class="stat-label">3rd Place Winner</div></div>
+          <div class="summary-stat"><div class="stat-val" id="exp-group-filled">0/72</div><div class="stat-label" data-i18n="statGroupFilled">Group Matches Filled</div></div>
+          <div class="summary-stat"><div class="stat-val" id="exp-ko-filled">0/31</div><div class="stat-label" data-i18n="statKoFilled">Knockout Matches Filled</div></div>
+          <div class="summary-stat"><div class="stat-val" id="exp-winner">—</div><div class="stat-label" data-i18n="statChampion">Predicted Champion</div></div>
+          <div class="summary-stat"><div class="stat-val" id="exp-third">—</div><div class="stat-label" data-i18n="statThird">3rd Place Winner</div></div>
         </div>
       </div>
       <div class="card">
-        <h3>Best 3rd-Place Teams (Top 8 Qualify)</h3>
+        <h3 data-i18n="thirdPlaceTitle">Best 3rd-Place Teams (Top 8 Qualify)</h3>
         <table class="third-place-table">
-          <thead><tr><th>Team</th><th>Group</th><th>Pts</th><th>GD</th><th>GF</th><th>Status</th></tr></thead>
+          <thead><tr><th data-i18n="colTeam">Team</th><th data-i18n="colGroup">Group</th><th>Pts</th><th>GD</th><th>GF</th><th data-i18n="colStatus">Status</th></tr></thead>
           <tbody id="third-place-table"></tbody>
         </table>
-        <p class="notice">The exact slot assignment for 3rd-place teams follows FIFA's 495-scenario table based on which groups qualify. This app assigns them in ranking order to the 8 available slots.</p>
+        <p class="notice" data-i18n="thirdPlaceNotice">The exact slot assignment for 3rd-place teams follows FIFA's 495-scenario table based on which groups qualify. This app assigns them in ranking order to the 8 available slots.</p>
       </div>
       <div class="card">
-        <h3>🏅 Tournament Awards</h3>
+        <h3 data-i18n="awardsTitle">🏅 Tournament Awards</h3>
         <div class="award-grid">
           <div class="award-field">
-            <label>🥾 Golden Boot — Top Scorer</label>
-            <input class="award-input" id="award-topScorer" type="text" placeholder="Player name…" oninput="onAwardInput()">
+            <label data-i18n="awardBoot">🥾 Golden Boot — Top Scorer</label>
+            <input class="award-input" id="award-topScorer" type="text" data-i18n-placeholder="playerPlaceholder" placeholder="Player name…" oninput="onAwardInput()">
           </div>
           <div class="award-field">
-            <label>⚽ Golden Ball — Best Player</label>
-            <input class="award-input" id="award-bestPlayer" type="text" placeholder="Player name…" oninput="onAwardInput()">
+            <label data-i18n="awardBall">⚽ Golden Ball — Best Player</label>
+            <input class="award-input" id="award-bestPlayer" type="text" data-i18n-placeholder="playerPlaceholder" placeholder="Player name…" oninput="onAwardInput()">
           </div>
           <div class="award-field">
-            <label>🧤 Golden Glove — Best Goalkeeper</label>
-            <input class="award-input" id="award-bestGoalkeeper" type="text" placeholder="Player name…" oninput="onAwardInput()">
+            <label data-i18n="awardGlove">🧤 Golden Glove — Best Goalkeeper</label>
+            <input class="award-input" id="award-bestGoalkeeper" type="text" data-i18n-placeholder="playerPlaceholder" placeholder="Player name…" oninput="onAwardInput()">
           </div>
         </div>
       </div>
       <div class="card">
-        <h3>🟥 Red Card Jokers</h3>
-        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Flag up to 5 matches where you predict a red card will be shown.</p>
+        <h3 data-i18n="jokersTitle">🟥 Red Card Jokers</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px" data-i18n="jokersDesc">Flag up to 5 matches where you predict a red card will be shown.</p>
         <div class="joker-list" id="joker-list"></div>
-        <button class="btn btn-ghost joker-add" id="joker-add-btn" onclick="addJoker()">+ Add joker</button>
+        <button class="btn btn-ghost joker-add" id="joker-add-btn" onclick="addJoker()" data-i18n="addJoker">+ Add joker</button>
       </div>
       <div class="card">
-        <h3>📊 Elimination Predictions</h3>
-        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Auto-filled from your bracket — override if needed. Only knockout teams shown.</p>
+        <h3 data-i18n="elimTitle">📊 Elimination Predictions</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px" data-i18n="elimDesc">Auto-filled from your bracket — override if needed. Only knockout teams shown.</p>
         <div id="elim-container"></div>
       </div>
       <div class="card">
-        <h3>Export</h3>
-        <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px">Download all prediction data — scores, group standings, bracket results — as a JSON file.</p>
-        <button class="btn btn-primary" onclick="exportData()" style="width:100%">⬇ Download Predictions JSON</button>
+        <h3 data-i18n="exportTitle">Export</h3>
+        <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px" data-i18n="exportDesc">Download all prediction data — scores, group standings, bracket results — as a JSON file.</p>
+        <button class="btn btn-primary" onclick="exportData()" style="width:100%" data-i18n="downloadJsonBtn">⬇ Download Predictions JSON</button>
       </div>
     </div>
   </div>
   <div id="scoring-section" class="section">
-    <div class="scoring-section">
-
-      <div class="card">
-        <h3>⚽ Group Stage</h3>
-        <p class="card-subtitle">Applies to all 72 group fixtures (matchdays 1–3 in each group).</p>
-        <table class="scoring-table">
-          <thead><tr><th>Prediction</th><th>Points</th></tr></thead>
-          <tbody>
-            <tr><td>Exact scoreline (e.g. 2–1, correct for both teams)</td><td><span class="pts-badge big">3 pts</span></td></tr>
-            <tr><td>Correct outcome only (win / draw / loss)</td><td><span class="pts-badge">1 pt</span></td></tr>
-          </tbody>
-        </table>
-        <div class="scoring-divider"></div>
-        <table class="scoring-table">
-          <thead><tr><th>Group bonus (per group)</th><th>Points</th></tr></thead>
-          <tbody>
-            <tr><td>Correct group winner (1st place)</td><td><span class="pts-badge">1 pt</span></td></tr>
-            <tr><td>All 4 positions correct — replaces the 1 pt above</td><td><span class="pts-badge big">3 pts</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h3>🏆 Knockout Rounds — R32 through Semi-Finals</h3>
-        <p class="card-subtitle">Applies to matches 73–102. Penalty shootout predictions count.</p>
-        <table class="scoring-table">
-          <thead><tr><th>Prediction</th><th>Points</th></tr></thead>
-          <tbody>
-            <tr><td>Exact scoreline <em>and</em> right opponent</td><td><span class="pts-badge big">4 pts</span></td></tr>
-            <tr><td>Exact scoreline, wrong penalty winner, right opponent</td><td><span class="pts-badge">2 pts</span></td></tr>
-            <tr><td>Correct winner, right opponent</td><td><span class="pts-badge">2 pts</span></td></tr>
-            <tr><td>Correct winner, wrong opponent</td><td><span class="pts-badge">1 pt</span></td></tr>
-            <tr><td style="color:var(--green)">+ Predicted the loser to be eliminated in this exact round<br><span style="font-size:.75rem;color:var(--muted)">(bonus — stacks with any row above)</span></td><td><span class="pts-badge bonus">+1 pt</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h3>🥇 Final</h3>
-        <p class="card-subtitle">Match 104. Same structure as knockout rounds but with higher point values.</p>
-        <table class="scoring-table">
-          <thead><tr><th>Prediction</th><th>Points</th></tr></thead>
-          <tbody>
-            <tr><td>Exact scoreline <em>and</em> right opponent</td><td><span class="pts-badge big">7 pts</span></td></tr>
-            <tr><td>Exact scoreline, wrong penalty winner, right opponent</td><td><span class="pts-badge big">5 pts</span></td></tr>
-            <tr><td>Correct winner, right opponent</td><td><span class="pts-badge big">5 pts</span></td></tr>
-            <tr><td>Correct winner, wrong opponent</td><td><span class="pts-badge">2 pts</span></td></tr>
-            <tr><td style="color:var(--green)">+ Predicted the runner-up to lose in the Final<br><span style="font-size:.75rem;color:var(--muted)">(bonus — stacks with any row above)</span></td><td><span class="pts-badge bonus">+1 pt</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h3>🎖️ Tournament Predictions</h3>
-        <p class="card-subtitle">Scored from your pre-tournament bracket picks and award predictions.</p>
-        <table class="scoring-table">
-          <thead><tr><th>Prediction</th><th>Points</th></tr></thead>
-          <tbody>
-            <tr><td>🏆 Tournament champion</td><td><span class="pts-badge big">5 pts</span></td></tr>
-            <tr><td>🥉 Third place winner</td><td><span class="pts-badge big">5 pts</span></td></tr>
-            <tr><td>🥾 Golden Boot — correct top scorer</td><td><span class="pts-badge">3 pts</span></td></tr>
-            <tr><td>⚽ Golden Ball — correct best player</td><td><span class="pts-badge">3 pts</span></td></tr>
-            <tr><td>🧤 Golden Glove — correct best goalkeeper</td><td><span class="pts-badge">3 pts</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h3>🟥 Red Card Jokers</h3>
-        <p class="card-subtitle">Pick up to 5 matches where you predict a red card will be shown. Both teams must match exactly.</p>
-        <table class="scoring-table">
-          <thead><tr><th>Outcome</th><th>Points</th></tr></thead>
-          <tbody>
-            <tr><td>Red card shown in your predicted match (both teams correct)</td><td><span class="pts-badge big">10 pts</span></td></tr>
-            <tr><td>No red card shown, or wrong match</td><td><span class="pts-badge" style="background:rgba(224,85,85,.1);color:var(--red);border-color:rgba(224,85,85,.3)">0 pts</span></td></tr>
-          </tbody>
-        </table>
-        <div class="scoring-divider"></div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <div class="summary-stat" style="flex:1;min-width:120px"><div class="stat-val">50</div><div class="stat-label">Max possible from jokers</div></div>
-          <div class="summary-stat" style="flex:1;min-width:120px"><div class="stat-val">5</div><div class="stat-label">Joker slots available</div></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>📊 Maximum Points Summary</h3>
-        <table class="scoring-table">
-          <thead><tr><th>Category</th><th>Max pts</th></tr></thead>
-          <tbody>
-            <tr><td>Group stage — scorelines (72 × 3)</td><td><span class="pts-badge">216</span></td></tr>
-            <tr><td>Group stage — group winners (12 × 1)</td><td><span class="pts-badge">12</span></td></tr>
-            <tr><td>Group stage — perfect groups (12 × 3, replaces above)</td><td><span class="pts-badge">36</span></td></tr>
-            <tr><td>Knockout R32–SF scorelines (30 × 4)</td><td><span class="pts-badge">120</span></td></tr>
-            <tr><td>Knockout R32–SF elimination bonuses (30 × 1)</td><td><span class="pts-badge">30</span></td></tr>
-            <tr><td>Final (7 + 1 bonus)</td><td><span class="pts-badge">8</span></td></tr>
-            <tr><td>Tournament predictions (5+5+3+3+3)</td><td><span class="pts-badge">19</span></td></tr>
-            <tr><td>Red card jokers (5 × 10)</td><td><span class="pts-badge">50</span></td></tr>
-            <tr style="border-top:2px solid var(--border)"><td style="font-weight:700;color:var(--primary)">Grand total (perfect score)</td><td><span class="pts-badge big">481</span></td></tr>
-          </tbody>
-        </table>
-        <p class="notice" style="margin-top:12px">The perfect group bonus (3 pts) replaces the group winner bonus (1 pt), so the true max group stage total is 216 + 36 = 252 pts.</p>
-      </div>
-
-    </div>
+    <div class="scoring-section" id="scoring-content"></div>
   </div>
 </main>
 
+<!-- Language selection modal -->
+<div class="lang-modal-overlay hidden" id="lang-modal">
+  <div class="lang-modal">
+    <h2>⚽ 2026 FIFA World Cup</h2>
+    <p>Choose your language / Elige tu idioma</p>
+    <div class="lang-btn-row">
+      <button class="lang-choice-btn" onclick="setLang('en')">
+        <span class="lang-flag">🇬🇧</span>
+        <span>English</span>
+      </button>
+      <button class="lang-choice-btn" onclick="setLang('es')">
+        <span class="lang-flag">🇪🇸</span>
+        <span>Español</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
+// ===================== INTERNATIONALISATION =====================
+
+let lang = 'en';
+
+const T = {
+  en: {
+    // Header / nav
+    progressLabel: 'Group matches:',
+    exportBtn: '📊 Export',
+    downloadBtn: '⬇ Download',
+    tabGroups: 'Group Stage',
+    tabKnockout: 'Knockout Bracket',
+    tabExport: 'Standings & Export',
+    tabScoring: 'Scoring Guide',
+    langToggle: '🇬🇧 EN',
+
+    // Export section
+    progressTitle: 'Progress Summary',
+    statGroupFilled: 'Group Matches Filled',
+    statKoFilled: 'Knockout Matches Filled',
+    statChampion: 'Predicted Champion',
+    statThird: '3rd Place Winner',
+    thirdPlaceTitle: 'Best 3rd-Place Teams (Top 8 Qualify)',
+    colTeam: 'Team',
+    colGroup: 'Group',
+    colStatus: 'Status',
+    thirdPlaceNotice: "The exact slot assignment for 3rd-place teams follows FIFA's 495-scenario table based on which groups qualify. This app assigns them in ranking order to the 8 available slots.",
+    statusQualifies: 'Qualifies',
+    statusElim: 'Eliminated',
+    groupPrefix: 'Group ',
+    awardsTitle: '🏅 Tournament Awards',
+    awardBoot: '🥾 Golden Boot — Top Scorer',
+    awardBall: '⚽ Golden Ball — Best Player',
+    awardGlove: '🧤 Golden Glove — Best Goalkeeper',
+    playerPlaceholder: 'Player name…',
+    jokersTitle: '🟥 Red Card Jokers',
+    jokersDesc: 'Flag up to 5 matches where you predict a red card will be shown.',
+    addJoker: '+ Add joker',
+    elimTitle: '📊 Elimination Predictions',
+    elimDesc: 'Auto-filled from your bracket — override if needed. Only knockout teams shown.',
+    elimEmpty: 'Fill in the knockout bracket to see elimination predictions.',
+    elimColTeam: 'Team',
+    elimColRound: 'Eliminated in',
+    elimAuto: '— auto —',
+    exportTitle: 'Export',
+    exportDesc: 'Download all prediction data — scores, group standings, bracket results — as a JSON file.',
+    downloadJsonBtn: '⬇ Download Predictions JSON',
+
+    // Groups
+    groupWord: 'GROUP',
+    clearBtn: '✕ Clear',
+    clearConfirm: g => `Clear all scores for Group ${g}?`,
+    colGP: 'GP', colW: 'W', colD: 'D', colL: 'L', colGD: 'GD', colGF: 'GF',
+
+    // Bracket round labels
+    r32: 'Round of 32',
+    r16: 'Round of 16',
+    qf: 'Quarter-Finals',
+    sf: 'Semi-Finals',
+    finalLabel: '🏆 Final',
+    thirdPlaceMatch: '3rd Place Match',
+
+    // Elim round labels
+    roundLabels: {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-Final',SF:'Semi-Final',Final:'Final',Winner:'🏆 Winner'},
+
+    // Joker match selector
+    jokerGroupStage: 'Group Stage',
+    jokerSelectPrompt: '— select a match —',
+
+    // Scoring guide
+    sgTitle1: '⚽ Group Stage',
+    sgSub1: 'Applies to all 72 group fixtures (matchdays 1–3 in each group).',
+    sgColPred: 'Prediction', sgColPts: 'Points', sgColOutcome: 'Outcome', sgColCat: 'Category', sgColMax: 'Max pts',
+    sgGroupBonus: 'Group bonus (per group)',
+    sgRows1: [
+      ['Exact scoreline (e.g. 2–1, correct for both teams)', '3 pts', 'big'],
+      ['Correct outcome only (win / draw / loss)', '1 pt', ''],
+    ],
+    sgBonus1: [
+      ['Correct group winner (1st place)', '1 pt', ''],
+      ['All 4 positions correct — replaces the 1 pt above', '3 pts', 'big'],
+    ],
+    sgTitle2: '🏆 Knockout Rounds — R32 through Semi-Finals',
+    sgSub2: 'Applies to matches 73–102. Penalty shootout predictions count.',
+    sgRows2: [
+      ['Exact scoreline <em>and</em> right opponent', '4 pts', 'big'],
+      ['Exact scoreline, wrong penalty winner, right opponent', '2 pts', ''],
+      ['Correct winner, right opponent', '2 pts', ''],
+      ['Correct winner, wrong opponent', '1 pt', ''],
+    ],
+    sgElimBonus: '+ Predicted the loser to be eliminated in this exact round',
+    sgElimBonusSub: '(bonus — stacks with any row above)',
+    sgTitle3: '🥇 Final',
+    sgSub3: 'Match 104. Same structure as knockout rounds but with higher point values.',
+    sgRows3: [
+      ['Exact scoreline <em>and</em> right opponent', '7 pts', 'big'],
+      ['Exact scoreline, wrong penalty winner, right opponent', '5 pts', 'big'],
+      ['Correct winner, right opponent', '5 pts', 'big'],
+      ['Correct winner, wrong opponent', '2 pts', ''],
+    ],
+    sgFinalBonus: '+ Predicted the runner-up to lose in the Final',
+    sgFinalBonusSub: '(bonus — stacks with any row above)',
+    sgTitle4: '🎖️ Tournament Predictions',
+    sgSub4: 'Scored from your pre-tournament bracket picks and award predictions.',
+    sgRows4: [
+      ['🏆 Tournament champion', '5 pts', 'big'],
+      ['🥉 Third place winner', '5 pts', 'big'],
+      ['🥾 Golden Boot — correct top scorer', '3 pts', ''],
+      ['⚽ Golden Ball — correct best player', '3 pts', ''],
+      ['🧤 Golden Glove — correct best goalkeeper', '3 pts', ''],
+    ],
+    sgTitle5: '🟥 Red Card Jokers',
+    sgSub5: 'Pick up to 5 matches where you predict a red card will be shown. Both teams must match exactly.',
+    sgRows5: [
+      ['Red card shown in your predicted match (both teams correct)', '10 pts', 'big'],
+      ['No red card shown, or wrong match', '0 pts', 'zero'],
+    ],
+    sgMaxJokers: 'Max possible from jokers',
+    sgJokerSlots: 'Joker slots available',
+    sgTitle6: '📊 Maximum Points Summary',
+    sgSummaryRows: [
+      ['Group stage — scorelines (72 × 3)', '216'],
+      ['Group stage — group winners (12 × 1)', '12'],
+      ['Group stage — perfect groups (12 × 3, replaces above)', '36'],
+      ['Knockout R32–SF scorelines (30 × 4)', '120'],
+      ['Knockout R32–SF elimination bonuses (30 × 1)', '30'],
+      ['Final (7 + 1 bonus)', '8'],
+      ['Tournament predictions (5+5+3+3+3)', '19'],
+      ['Red card jokers (5 × 10)', '50'],
+    ],
+    sgGrandTotal: 'Grand total (perfect score)',
+    sgNotice: 'The perfect group bonus (3 pts) replaces the group winner bonus (1 pt), so the true max group stage total is 216 + 36 = 252 pts.',
+  },
+  es: {
+    progressLabel: 'Partidos:',
+    exportBtn: '📊 Exportar',
+    downloadBtn: '⬇ Descargar',
+    tabGroups: 'Fase de Grupos',
+    tabKnockout: 'Cuadro Eliminatorio',
+    tabExport: 'Clasificación y Exportar',
+    tabScoring: 'Guía de Puntuación',
+    langToggle: '🇪🇸 ES',
+
+    progressTitle: 'Resumen de Progreso',
+    statGroupFilled: 'Partidos de Grupo Completados',
+    statKoFilled: 'Partidos KO Completados',
+    statChampion: 'Campeón Previsto',
+    statThird: 'Ganador del 3.er Puesto',
+    thirdPlaceTitle: 'Mejores Terceros Clasificados (Top 8)',
+    colTeam: 'Equipo',
+    colGroup: 'Grupo',
+    colStatus: 'Estado',
+    thirdPlaceNotice: 'La asignación exacta de los equipos terceros sigue la tabla de 495 escenarios de la FIFA. Esta app los asigna en orden de clasificación a las 8 plazas disponibles.',
+    statusQualifies: 'Clasifica',
+    statusElim: 'Eliminado',
+    groupPrefix: 'Grupo ',
+    awardsTitle: '🏅 Premios del Torneo',
+    awardBoot: '🥾 Bota de Oro — Máximo Goleador',
+    awardBall: '⚽ Balón de Oro — Mejor Jugador',
+    awardGlove: '🧤 Guante de Oro — Mejor Portero',
+    playerPlaceholder: 'Nombre del jugador…',
+    jokersTitle: '🟥 Comodines Tarjeta Roja',
+    jokersDesc: 'Señala hasta 5 partidos donde predices que habrá tarjeta roja.',
+    addJoker: '+ Añadir comodín',
+    elimTitle: '📊 Predicciones de Eliminación',
+    elimDesc: 'Relleno automáticamente desde tu cuadro. Puedes modificarlo. Solo equipos KO.',
+    elimEmpty: 'Completa el cuadro eliminatorio para ver las predicciones de eliminación.',
+    elimColTeam: 'Equipo',
+    elimColRound: 'Eliminado en',
+    elimAuto: '— auto —',
+    exportTitle: 'Exportar',
+    exportDesc: 'Descarga todos tus datos de predicción — marcadores, grupos, cuadro — como archivo JSON.',
+    downloadJsonBtn: '⬇ Descargar Predicciones JSON',
+
+    groupWord: 'GRUPO',
+    clearBtn: '✕ Borrar',
+    clearConfirm: g => `¿Borrar todos los marcadores del Grupo ${g}?`,
+    colGP: 'PJ', colW: 'G', colD: 'E', colL: 'P', colGD: 'DG', colGF: 'GF',
+
+    r32: 'Ronda de 32',
+    r16: 'Octavos de Final',
+    qf: 'Cuartos de Final',
+    sf: 'Semifinales',
+    finalLabel: '🏆 Final',
+    thirdPlaceMatch: '3.er Puesto',
+
+    roundLabels: {R32:'Ronda de 32',R16:'Octavos de Final',QF:'Cuartos de Final',SF:'Semifinales',Final:'Final',Winner:'🏆 Ganador'},
+
+    jokerGroupStage: 'Fase de Grupos',
+    jokerSelectPrompt: '— selecciona un partido —',
+
+    sgTitle1: '⚽ Fase de Grupos',
+    sgSub1: 'Aplica a los 72 partidos de grupo (jornadas 1–3 en cada grupo).',
+    sgColPred: 'Predicción', sgColPts: 'Puntos', sgColOutcome: 'Resultado', sgColCat: 'Categoría', sgColMax: 'Pts máx.',
+    sgGroupBonus: 'Bonus de grupo (por grupo)',
+    sgRows1: [
+      ['Marcador exacto (ej. 2–1, correcto para ambos equipos)', '3 pts', 'big'],
+      ['Resultado correcto (victoria / empate / derrota)', '1 pt', ''],
+    ],
+    sgBonus1: [
+      ['Primer clasificado del grupo correcto', '1 pt', ''],
+      ['Las 4 posiciones correctas — reemplaza el 1 pt anterior', '3 pts', 'big'],
+    ],
+    sgTitle2: '🏆 Ronda Eliminatoria — R32 hasta Semifinales',
+    sgSub2: 'Aplica a los partidos 73–102. Las predicciones de penaltis cuentan.',
+    sgRows2: [
+      ['Marcador exacto <em>y</em> rival correcto', '4 pts', 'big'],
+      ['Marcador exacto, ganador de penaltis incorrecto, rival correcto', '2 pts', ''],
+      ['Ganador correcto, rival correcto', '2 pts', ''],
+      ['Ganador correcto, rival incorrecto', '1 pt', ''],
+    ],
+    sgElimBonus: '+ Predijiste que el perdedor sería eliminado exactamente en esta ronda',
+    sgElimBonusSub: '(bonus — se acumula con cualquier fila anterior)',
+    sgTitle3: '🥇 Final',
+    sgSub3: 'Partido 104. Misma estructura que la eliminatoria pero con más puntos.',
+    sgRows3: [
+      ['Marcador exacto <em>y</em> rival correcto', '7 pts', 'big'],
+      ['Marcador exacto, ganador de penaltis incorrecto, rival correcto', '5 pts', 'big'],
+      ['Ganador correcto, rival correcto', '5 pts', 'big'],
+      ['Ganador correcto, rival incorrecto', '2 pts', ''],
+    ],
+    sgFinalBonus: '+ Predijiste que el finalista perdedor caería en la Final',
+    sgFinalBonusSub: '(bonus — se acumula con cualquier fila anterior)',
+    sgTitle4: '🎖️ Predicciones del Torneo',
+    sgSub4: 'Puntuadas a partir de tus selecciones del cuadro y los premios.',
+    sgRows4: [
+      ['🏆 Campeón del torneo', '5 pts', 'big'],
+      ['🥉 Ganador del 3.er puesto', '5 pts', 'big'],
+      ['🥾 Bota de Oro — máximo goleador correcto', '3 pts', ''],
+      ['⚽ Balón de Oro — mejor jugador correcto', '3 pts', ''],
+      ['🧤 Guante de Oro — mejor portero correcto', '3 pts', ''],
+    ],
+    sgTitle5: '🟥 Comodines Tarjeta Roja',
+    sgSub5: 'Elige hasta 5 partidos donde predices que habrá tarjeta roja. Ambos equipos deben coincidir exactamente.',
+    sgRows5: [
+      ['Tarjeta roja mostrada en el partido predicho (ambos equipos correctos)', '10 pts', 'big'],
+      ['Sin tarjeta roja, o partido incorrecto', '0 pts', 'zero'],
+    ],
+    sgMaxJokers: 'Máximo posible con comodines',
+    sgJokerSlots: 'Comodines disponibles',
+    sgTitle6: '📊 Resumen de Puntuación Máxima',
+    sgSummaryRows: [
+      ['Fase de grupos — marcadores (72 × 3)', '216'],
+      ['Fase de grupos — primeros de grupo (12 × 1)', '12'],
+      ['Fase de grupos — grupos perfectos (12 × 3, reemplaza lo anterior)', '36'],
+      ['KO R32–SF marcadores (30 × 4)', '120'],
+      ['KO R32–SF bonus de eliminación (30 × 1)', '30'],
+      ['Final (7 + 1 bonus)', '8'],
+      ['Predicciones del torneo (5+5+3+3+3)', '19'],
+      ['Comodines tarjeta roja (5 × 10)', '50'],
+    ],
+    sgGrandTotal: 'Total máximo (puntuación perfecta)',
+    sgNotice: 'El bonus de grupo perfecto (3 pts) reemplaza el bonus de primer clasificado (1 pt), así que el máximo real en la fase de grupos es 216 + 36 = 252 pts.',
+  }
+};
+
+function t(key) {
+  return (T[lang] && T[lang][key] !== undefined) ? T[lang][key] : (T.en[key] || key);
+}
+
+function openLangModal() {
+  document.getElementById('lang-modal').classList.remove('hidden');
+}
+
+function setLang(l) {
+  lang = l;
+  localStorage.setItem('wc2026_lang', l);
+  document.getElementById('lang-modal').classList.add('hidden');
+  applyLang();
+}
+
+function applyLang() {
+  // Update data-i18n text nodes
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const val = t(key);
+    if (typeof val === 'string') el.textContent = val;
+  });
+  // Update placeholders
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  // Update header buttons (they have icons so we use innerHTML carefully)
+  document.querySelectorAll('[data-i18n-btn]').forEach(el => {
+    el.textContent = t(el.dataset.i18nBtn);
+  });
+  // Lang toggle button
+  const toggleBtn = document.getElementById('lang-toggle-btn');
+  if (toggleBtn) toggleBtn.textContent = t('langToggle');
+
+  // Re-render dynamic sections
+  renderGroups();
+  renderScoringGuide();
+  // Re-render export section if visible
+  const activeTab = document.querySelector('.tab.active');
+  if (activeTab && activeTab.dataset.tab === 'export') updateExport();
+  if (activeTab && activeTab.dataset.tab === 'knockout') renderKnockout();
+}
+
+function renderScoringGuide() {
+  const container = document.getElementById('scoring-content');
+  if (!container) return;
+
+  function scoreTable(headCol, rows) {
+    return `<table class="scoring-table">
+      <thead><tr><th>${t(headCol)}</th><th>${t('sgColPts')}</th></tr></thead>
+      <tbody>${rows.map(([text, pts, cls]) => {
+        const badge = cls === 'zero'
+          ? `<span class="pts-badge" style="background:rgba(224,85,85,.1);color:var(--red);border-color:rgba(224,85,85,.3)">${pts}</span>`
+          : `<span class="pts-badge${cls?' '+cls:''}">${pts}</span>`;
+        return `<tr><td>${text}</td><td>${badge}</td></tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  container.innerHTML = `
+    <div class="card">
+      <h3>${t('sgTitle1')}</h3>
+      <p class="card-subtitle">${t('sgSub1')}</p>
+      ${scoreTable('sgColPred', t('sgRows1'))}
+      <div class="scoring-divider"></div>
+      <table class="scoring-table">
+        <thead><tr><th>${t('sgGroupBonus')}</th><th>${t('sgColPts')}</th></tr></thead>
+        <tbody>${t('sgBonus1').map(([text, pts, cls]) =>
+          `<tr><td>${text}</td><td><span class="pts-badge${cls?' '+cls:''}">${pts}</span></td></tr>`
+        ).join('')}</tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>${t('sgTitle2')}</h3>
+      <p class="card-subtitle">${t('sgSub2')}</p>
+      <table class="scoring-table">
+        <thead><tr><th>${t('sgColPred')}</th><th>${t('sgColPts')}</th></tr></thead>
+        <tbody>
+          ${t('sgRows2').map(([text, pts, cls]) =>
+            `<tr><td>${text}</td><td><span class="pts-badge${cls?' '+cls:''}">${pts}</span></td></tr>`
+          ).join('')}
+          <tr><td style="color:var(--green)">${t('sgElimBonus')}<br><span style="font-size:.75rem;color:var(--muted)">${t('sgElimBonusSub')}</span></td><td><span class="pts-badge bonus">+1 pt</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>${t('sgTitle3')}</h3>
+      <p class="card-subtitle">${t('sgSub3')}</p>
+      <table class="scoring-table">
+        <thead><tr><th>${t('sgColPred')}</th><th>${t('sgColPts')}</th></tr></thead>
+        <tbody>
+          ${t('sgRows3').map(([text, pts, cls]) =>
+            `<tr><td>${text}</td><td><span class="pts-badge${cls?' '+cls:''}">${pts}</span></td></tr>`
+          ).join('')}
+          <tr><td style="color:var(--green)">${t('sgFinalBonus')}<br><span style="font-size:.75rem;color:var(--muted)">${t('sgFinalBonusSub')}</span></td><td><span class="pts-badge bonus">+1 pt</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>${t('sgTitle4')}</h3>
+      <p class="card-subtitle">${t('sgSub4')}</p>
+      ${scoreTable('sgColPred', t('sgRows4'))}
+    </div>
+
+    <div class="card">
+      <h3>${t('sgTitle5')}</h3>
+      <p class="card-subtitle">${t('sgSub5')}</p>
+      ${scoreTable('sgColOutcome', t('sgRows5'))}
+      <div class="scoring-divider"></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div class="summary-stat" style="flex:1;min-width:120px"><div class="stat-val">50</div><div class="stat-label">${t('sgMaxJokers')}</div></div>
+        <div class="summary-stat" style="flex:1;min-width:120px"><div class="stat-val">5</div><div class="stat-label">${t('sgJokerSlots')}</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>${t('sgTitle6')}</h3>
+      <table class="scoring-table">
+        <thead><tr><th>${t('sgColCat')}</th><th>${t('sgColMax')}</th></tr></thead>
+        <tbody>
+          ${t('sgSummaryRows').map(([cat, pts]) =>
+            `<tr><td>${cat}</td><td><span class="pts-badge">${pts}</span></td></tr>`
+          ).join('')}
+          <tr style="border-top:2px solid var(--border)"><td style="font-weight:700;color:var(--primary)">${t('sgGrandTotal')}</td><td><span class="pts-badge big">481</span></td></tr>
+        </tbody>
+      </table>
+      <p class="notice" style="margin-top:12px">${t('sgNotice')}</p>
+    </div>
+  `;
+}
+
 // ===================== DATA =====================
 
 const GROUPS = {
@@ -1322,12 +1641,12 @@ function renderGroups() {
 
     card.innerHTML = `
       <div class="group-header">
-        <span class="group-name">GROUP ${g}</span>
-        <button class="clear-btn" onclick="clearGroup('${g}')">✕ Clear</button>
+        <span class="group-name">${t('groupWord')} ${g}</span>
+        <button class="clear-btn" onclick="clearGroup('${g}')">${t('clearBtn')}</button>
       </div>
       <div style="padding:8px 10px 4px">
         <table class="standings-table">
-          <thead><tr><th>Team</th><th>GP</th><th>W</th><th>D</th><th>L</th><th>Pts</th><th>GD</th><th>GF</th></tr></thead>
+          <thead><tr><th>${t('colTeam')}</th><th>${t('colGP')}</th><th>${t('colW')}</th><th>${t('colD')}</th><th>${t('colL')}</th><th>Pts</th><th>${t('colGD')}</th><th>${t('colGF')}</th></tr></thead>
           <tbody id="standings-${g}">${rows}</tbody>
         </table>
       </div>
@@ -1411,13 +1730,15 @@ function onGroupInput(e) {
 //                   (76,78)→91  (79,80)→92  (86,88)→95  (85,87)→96
 // R16 pairs → QF:   (89,90)→97  (93,94)→98  (91,92)→99  (95,96)→100
 // QF  pairs → SF:   (97,98)→101 (99,100)→102
-const BRACKET_DISPLAY = [
-  {label:'Round of 32',    ids:[74,77, 73,75, 83,84, 81,82, 76,78, 79,80, 86,88, 85,87], flex:1},
-  {label:'Round of 16',   ids:[89,90, 93,94, 91,92, 95,96],                              flex:2},
-  {label:'Quarter-Finals',ids:[97,98, 99,100],                                           flex:4},
-  {label:'Semi-Finals',   ids:[101,102],                                                 flex:8},
-  {label:'🏆 Final',      ids:[104],                                                     flex:16},
-];
+function getBracketDisplay() {
+  return [
+    {label:t('r32'),        ids:[74,77, 73,75, 83,84, 81,82, 76,78, 79,80, 86,88, 85,87], flex:1},
+    {label:t('r16'),        ids:[89,90, 93,94, 91,92, 95,96],                              flex:2},
+    {label:t('qf'),         ids:[97,98, 99,100],                                           flex:4},
+    {label:t('sf'),         ids:[101,102],                                                 flex:8},
+    {label:t('finalLabel'), ids:[104],                                                     flex:16},
+  ];
+}
 
 function makeMatchCard(match, resolved) {
   const r = resolved[match.id] || {};
@@ -1612,7 +1933,7 @@ function alignBracketCards(wrapper, resolved) {
 
         const tpHdr = document.createElement('div');
         tpHdr.style.cssText = 'text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--surface2);border:1px solid var(--border);border-radius:6px 6px 0 0;padding:8px;margin:0 8px 0';
-        tpHdr.textContent = '🥉 3rd Place';
+        tpHdr.textContent = `🥉 ${t('thirdPlaceMatch')}`;
         tpSlot.appendChild(tpHdr);
 
         const tpCard = makeMatchCard(THIRD_PLACE, resolved);
@@ -1648,6 +1969,7 @@ function renderKnockout() {
   const wrapper = document.getElementById('bracket-wrapper');
   wrapper.innerHTML = '';
 
+  const BRACKET_DISPLAY = getBracketDisplay();
   BRACKET_DISPLAY.forEach((round, ri) => {
     if (ri > 0) {
       const prevCount = BRACKET_DISPLAY[ri - 1].ids.length;
@@ -1739,9 +2061,9 @@ function matchLabel(matchId, resolved) {
 
 function buildMatchOptions(resolved, selectedId) {
   let opts = '';
-  opts += '<option value="">— select match —</option>';
+  opts += `<option value="">${t('jokerSelectPrompt')}</option>`;
   // Group fixtures
-  opts += '<optgroup label="Group Stage">';
+  opts += `<optgroup label="${t('jokerGroupStage')}">`;
   FIXTURES.forEach(f => {
     const sel = f.id === +selectedId ? ' selected' : '';
     opts += `<option value="${f.id}"${sel}>#${f.id} · Grp ${f.g} · ${f.h} vs ${f.a}</option>`;
@@ -1749,12 +2071,12 @@ function buildMatchOptions(resolved, selectedId) {
   opts += '</optgroup>';
   // KO rounds
   const roundGroups = [
-    {label:'Round of 32', matches: R32},
-    {label:'Round of 16', matches: R16},
-    {label:'Quarter-Finals', matches: QF},
-    {label:'Semi-Finals', matches: SF},
-    {label:'3rd Place', matches: [THIRD_PLACE]},
-    {label:'Final', matches: [FINAL]},
+    {label:t('r32'), matches: R32},
+    {label:t('r16'), matches: R16},
+    {label:t('qf'), matches: QF},
+    {label:t('sf'), matches: SF},
+    {label:t('thirdPlaceMatch'), matches: [THIRD_PLACE]},
+    {label:t('finalLabel'), matches: [FINAL]},
   ];
   roundGroups.forEach(rg => {
     opts += `<optgroup label="${rg.label}">`;
@@ -1828,7 +2150,7 @@ function onJokerChange(sel) {
 
 // ===================== ELIMINATION PREDICTIONS =====================
 const ELIM_ROUNDS = ['R32','R16','QF','SF','Final','Winner'];
-const ROUND_LABELS = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-Final',SF:'Semi-Final',Final:'Final',Winner:'🏆 Winner'};
+function getRoundLabels() { return t('roundLabels'); }
 
 // Derive each team's auto elimination round from the bracket
 function computeAutoElim(resolved) {
@@ -1861,17 +2183,18 @@ function renderEliminations(resolved) {
   const container = document.getElementById('elim-container');
   const teams = getKoTeams(resolved);
   if (!teams.length) {
-    container.innerHTML = '<p class="elim-empty">Fill in the knockout bracket to see elimination predictions.</p>';
+    container.innerHTML = `<p class="elim-empty">${t('elimEmpty')}</p>`;
     return;
   }
   const autoElim = computeAutoElim(resolved);
-  let html = '<table class="elim-table"><thead><tr><th>Team</th><th style="text-align:center">Eliminated in</th></tr></thead><tbody>';
+  const roundLabels = getRoundLabels();
+  let html = `<table class="elim-table"><thead><tr><th>${t('elimColTeam')}</th><th style="text-align:center">${t('elimColRound')}</th></tr></thead><tbody>`;
   teams.forEach(team => {
     const autoRound = autoElim[team] || '';
     const storedRound = eliminationOverrides[team] || '';
     const round = storedRound || autoRound;
-    const opts = `<option value=""${!round?' selected':''}>— auto —</option>` +
-      ELIM_ROUNDS.map(r => `<option value="${r}"${round===r?' selected':''}>${ROUND_LABELS[r]||r}</option>`).join('');
+    const opts = `<option value=""${!round?' selected':''}>${t('elimAuto')}</option>` +
+      ELIM_ROUNDS.map(r => `<option value="${r}"${round===r?' selected':''}>${roundLabels[r]||r}</option>`).join('');
     const isChamp = round === 'Winner';
     html += `<tr${isChamp?' style="opacity:.6"':''}>
       <td><div class="elim-team-cell">${FLAGS[team]||''} <span>${team}</span></div></td>
@@ -1937,11 +2260,11 @@ function updateExport() {
   tbody.innerHTML = thirds.map((t,i) => `
     <tr class="${i<8?'qualifying':''}">
       <td>${FLAGS[t.team]||''} ${t.team}${i<8?' ✓':''}</td>
-      <td>Group ${t.group}</td>
+      <td>${T[lang].groupPrefix||'Group '}${t.group}</td>
       <td>${t.pts}</td>
       <td>${t.gd > 0 ? '+' : ''}${t.gd}</td>
       <td>${t.gf}</td>
-      <td>${i<8?'<span style="color:var(--green)">Qualifies</span>':'<span style="color:var(--muted)">Eliminated</span>'}</td>
+      <td>${i<8?`<span style="color:var(--green)">${T[lang].statusQualifies}</span>`:`<span style="color:var(--muted)">${T[lang].statusElim}</span>`}</td>
     </tr>`).join('');
 
   // New sections
@@ -2018,7 +2341,7 @@ function exportData() {
 }
 
 function clearGroup(g) {
-  if (!confirm(`Clear all scores for Group ${g}?`)) return;
+  if (!confirm(t('clearConfirm')(g))) return;
   FIXTURES.filter(f => f.g === g).forEach(f => {
     delete groupScores[f.id];
     // Update inputs
@@ -2038,11 +2361,24 @@ function showTab(tab) {
   document.querySelector(`[data-tab="${tab}"]`)?.classList.add('active');
   if (tab === 'knockout') renderKnockout();
   if (tab === 'export') updateExport();
+  if (tab === 'scoring') renderScoringGuide();
 }
 
 // ===================== INIT =====================
 loadState();
-renderGroups();
+
+// Language init — show modal if not previously chosen
+const _savedLang = localStorage.getItem('wc2026_lang');
+if (_savedLang === 'en' || _savedLang === 'es') {
+  lang = _savedLang;
+  applyLang(); // applies translations then calls renderGroups etc.
+} else {
+  // No saved lang → show modal, but still render (in English default)
+  renderGroups();
+  renderScoringGuide();
+  document.getElementById('lang-modal').classList.remove('hidden');
+}
+
 recomputeKnockout();
 updateProgress();
 </script>
