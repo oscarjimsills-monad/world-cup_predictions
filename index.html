@@ -648,25 +648,6 @@ function renderScoringGuide() {
       <h3>${t('sgTitle5')}</h3>
       <p class="card-subtitle">${t('sgSub5')}</p>
       ${scoreTable('sgColOutcome', t('sgRows5'))}
-      <div class="scoring-divider"></div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
-        <div class="summary-stat" style="flex:1;min-width:120px"><div class="stat-val">50</div><div class="stat-label">${t('sgMaxJokers')}</div></div>
-        <div class="summary-stat" style="flex:1;min-width:120px"><div class="stat-val">5</div><div class="stat-label">${t('sgJokerSlots')}</div></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>${t('sgTitle6')}</h3>
-      <table class="scoring-table">
-        <thead><tr><th>${t('sgColCat')}</th><th>${t('sgColMax')}</th></tr></thead>
-        <tbody>
-          ${t('sgSummaryRows').map(([cat, pts]) =>
-            `<tr><td>${cat}</td><td><span class="pts-badge">${pts}</span></td></tr>`
-          ).join('')}
-          <tr style="border-top:2px solid var(--border)"><td style="font-weight:700;color:var(--primary)">${t('sgGrandTotal')}</td><td><span class="pts-badge big">481</span></td></tr>
-        </tbody>
-      </table>
-      <p class="notice" style="margin-top:12px">${t('sgNotice')}</p>
     </div>
   `;
 }
