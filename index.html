@@ -2149,12 +2149,14 @@ function onKoInput(e) {
     renderKnockout();
     updateExport();
     updateProgress();
-    // Restore focus to the next input after re-render
+    // Restore focus after re-render — double rAF ensures tpSlot (3rd place) is injected first
     if (_pendingKoFocus) {
-      const { mid, side } = _pendingKoFocus;
+      const focus = _pendingKoFocus;
       _pendingKoFocus = null;
-      const target = document.querySelector(`.bracket-score-input[data-mid="${mid}"][data-side="${side}"]`);
-      if (target && !target.disabled) { target.focus(); target.select(); }
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const target = document.querySelector(`.bracket-score-input[data-mid="${focus.mid}"][data-side="${focus.side}"]`);
+        if (target && !target.disabled) { target.focus(); target.select(); }
+      }));
     }
   }, 300);
 }
