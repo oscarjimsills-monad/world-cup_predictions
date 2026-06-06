@@ -80,8 +80,8 @@ main{padding:20px;max-width:1600px;margin:0 auto}
 .group-divider{border-top:2px solid rgba(200,169,81,.2);margin:6px 10px}
 
 /* Knockout Bracket */
-#knockout-section{overflow:visible}
-#bracket-scroll-container{overflow-x:auto}
+#knockout-section{overflow:hidden;display:flex;flex-direction:column;height:calc(100vh - 110px)}
+#bracket-scroll-container{overflow:auto;flex:1}
 .bracket-wrapper{display:flex;gap:0;padding:20px 10px 20px;min-width:1100px;align-items:flex-start}
 .bracket-round{display:flex;flex-direction:column;min-width:210px;flex-shrink:0}
 .round-header{text-align:center;font-size:.75rem;font-weight:700;color:var(--primary);letter-spacing:1px;text-transform:uppercase;padding:8px;margin-bottom:0;background:var(--surface2);border-radius:6px 6px 0 0;border:1px solid var(--border)}
