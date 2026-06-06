@@ -217,7 +217,7 @@ main{padding:20px;max-width:1600px;margin:0 auto}
         <h3 data-i18n="progressTitle">Progress Summary</h3>
         <div class="summary-grid">
           <div class="summary-stat"><div class="stat-val" id="exp-group-filled">0/72</div><div class="stat-label" data-i18n="statGroupFilled">Group Matches Filled</div></div>
-          <div class="summary-stat"><div class="stat-val" id="exp-ko-filled">0/31</div><div class="stat-label" data-i18n="statKoFilled">Knockout Matches Filled</div></div>
+          <div class="summary-stat"><div class="stat-val" id="exp-ko-filled">0/32</div><div class="stat-label" data-i18n="statKoFilled">Knockout Matches Filled</div></div>
           <div class="summary-stat"><div class="stat-val" id="exp-winner">—</div><div class="stat-label" data-i18n="statChampion">Predicted Champion</div></div>
           <div class="summary-stat"><div class="stat-val" id="exp-third">—</div><div class="stat-label" data-i18n="statThird">3rd Place Winner</div></div>
         </div>
@@ -2256,7 +2256,7 @@ function updateExport() {
   }).length;
 
   document.getElementById('exp-group-filled').textContent = `${groupFilled}/72`;
-  document.getElementById('exp-ko-filled').textContent = `${koFilled}/31`;
+  document.getElementById('exp-ko-filled').textContent = `${koFilled}/32`;
 
   // Final winner
   const finalRes = recomputeKnockout();
