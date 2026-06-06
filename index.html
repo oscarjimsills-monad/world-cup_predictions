@@ -43,7 +43,8 @@ main{padding:0;max-width:1600px;margin:0 auto}
 
 /* Groups */
 .groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
-.group-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.group-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:box-shadow .4s,border-color .4s}
+.group-card.complete{border-color:rgba(200,169,81,.55);box-shadow:0 0 0 1px rgba(200,169,81,.25),inset 0 0 0 1px rgba(200,169,81,.08)}
 .group-header{background:var(--surface2);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
 .group-name{font-weight:700;color:var(--primary);font-size:.95rem;letter-spacing:.5px}
 .group-stats-mini{font-size:.75rem;color:var(--muted)}
@@ -69,7 +70,7 @@ main{padding:0;max-width:1600px;margin:0 auto}
 .fixture-row:last-child{border-bottom:none}
 .fixture-team{flex:1;font-size:.82rem;display:flex;align-items:center;gap:5px}
 .fixture-team.home{justify-content:flex-end}
-.fixture-score{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.fixture-score{display:flex;align-items:center;gap:4px;flex-shrink:0;cursor:pointer;padding:6px 4px;margin:-6px -4px}
 .score-input{width:38px;height:32px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:.9rem;text-align:center;font-family:inherit;transition:border-color .15s}
 .score-input:focus{outline:none;border-color:var(--primary)}
 .score-sep{color:var(--muted);font-size:.9rem;font-weight:300}
@@ -1760,6 +1761,13 @@ function renderGroups() {
         </table>
       </div>`;
 
+    // Gold border if already complete (loaded from saved state)
+    const allFilled = fixtures.every(f => {
+      const sc = groupScores[f.id];
+      return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
+    });
+    if (allFilled) card.classList.add('complete');
+
     grid.appendChild(card);
   });
 
@@ -1768,11 +1776,23 @@ function renderGroups() {
   allInputs.forEach((inp, idx) => {
     inp.addEventListener('input', e => {
       onGroupInput(e);
-      // Auto-advance to next input once a digit is typed
       if (inp.value !== '') {
         const next = allInputs[idx + 1];
         if (next) { next.focus(); next.select(); }
       }
+    });
+    // Disable arrow keys changing value (up/down = scroll, not score change)
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+    });
+  });
+
+  // Tapping anywhere in the score area focuses the home input
+  document.querySelectorAll('.fixture-score').forEach(scoreDiv => {
+    scoreDiv.addEventListener('click', e => {
+      if (e.target.classList.contains('score-input')) return; // already on an input
+      const homeInput = scoreDiv.querySelector('.score-input');
+      if (homeInput) { homeInput.focus(); homeInput.select(); }
     });
   });
 }
@@ -1795,8 +1815,17 @@ function updateGroupCard(g) {
     </tr>`;
   }).join('');
 
+  // Gold border when all 6 group fixtures are filled
+  const groupFixtures = FIXTURES.filter(f => f.g === g);
+  const allFilled = groupFixtures.every(f => {
+    const sc = groupScores[f.id];
+    return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
+  });
+  const card = document.getElementById(`group-card-${g}`);
+  if (card) card.classList.toggle('complete', allFilled);
+
   // Update fixture row styles
-  FIXTURES.filter(f => f.g === g).forEach(f => {
+  groupFixtures.forEach(f => {
     const sc = groupScores[f.id] || {};
     const inputs = document.querySelectorAll(`[data-fid="${f.id}"]`);
     if (!inputs.length) return;
@@ -2131,6 +2160,9 @@ function renderKnockout() {
 
   document.querySelectorAll('.bracket-score-input:not(:disabled)').forEach(inp => {
     inp.addEventListener('input', onKoInput);
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+    });
   });
 }
 
