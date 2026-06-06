@@ -1893,6 +1893,12 @@ function makeMatchCard(match, resolved) {
       if (!knockoutScores[mid]) knockoutScores[mid] = {h:null,a:null};
       // Toggle off if already selected
       knockoutScores[mid].pens = knockoutScores[mid].pens === side ? null : side;
+      // Auto-advance: find the away input of this match, then queue the next input
+      const all = Array.from(document.querySelectorAll('.bracket-score-input:not(:disabled)'));
+      const awayIdx = all.findIndex(i => +i.dataset.mid === mid && i.dataset.side === 'a');
+      if (awayIdx !== -1 && awayIdx < all.length - 1) {
+        _pendingKoFocus = { mid: +all[awayIdx + 1].dataset.mid, side: all[awayIdx + 1].dataset.side };
+      }
       recomputeKnockout();
       renderKnockout();
     });
