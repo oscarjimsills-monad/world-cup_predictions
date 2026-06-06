@@ -285,6 +285,19 @@ main{padding:0;max-width:1600px;margin:0 auto}
   </div>
 </div>
 
+<!-- Incomplete warning modal -->
+<div class="lang-modal-overlay hidden" id="incomplete-modal">
+  <div class="lang-modal" style="max-width:480px">
+    <h2 style="color:var(--primary);margin-bottom:8px">⚠️ Not quite done!</h2>
+    <p style="margin-bottom:16px;color:var(--muted);font-size:.88rem">The following sections are incomplete:</p>
+    <ul id="incomplete-list" style="list-style:none;margin-bottom:20px;display:flex;flex-direction:column;gap:8px"></ul>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeIncompleteModal()">Go back</button>
+      <button class="btn btn-primary" style="flex:1" onclick="closeIncompleteModal();exportData()">Download anyway</button>
+    </div>
+  </div>
+</div>
+
 <!-- Language selection modal -->
 <div class="lang-modal-overlay hidden" id="lang-modal">
   <div class="lang-modal">
@@ -568,6 +581,50 @@ function t(key) {
   return (T[lang] && T[lang][key] !== undefined) ? T[lang][key] : (T.en[key] || key);
 }
 
+function checkIncomplete() {
+  const issues = [];
+
+  // Group stage
+  const groupFilled = Object.keys(groupScores).filter(id => {
+    const sc = groupScores[id]; return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
+  }).length;
+  if (groupFilled < 72) {
+    issues.push({
+      text: `Group Stage — ${72 - groupFilled} match${72 - groupFilled > 1 ? 'es' : ''} unfilled`,
+      tab: 'groups', icon: '⚽'
+    });
+  }
+
+  // Knockout bracket
+  const koFilled = Object.keys(knockoutScores).filter(id => {
+    const sc = knockoutScores[id]; return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
+  }).length;
+  if (koFilled < 32) {
+    issues.push({
+      text: `Knockout Bracket — ${32 - koFilled} match${32 - koFilled > 1 ? 'es' : ''} unfilled`,
+      tab: 'knockout', icon: '🏆'
+    });
+  }
+
+  // Tournament awards
+  const missingAwards = [];
+  if (!tournamentAwards.topScorer)     missingAwards.push('Golden Boot');
+  if (!tournamentAwards.bestPlayer)    missingAwards.push('Golden Ball');
+  if (!tournamentAwards.bestGoalkeeper) missingAwards.push('Golden Glove');
+  if (missingAwards.length) {
+    issues.push({
+      text: `Awards — ${missingAwards.join(', ')} missing`,
+      tab: 'export', icon: '🏅'
+    });
+  }
+
+  return issues;
+}
+
+function closeIncompleteModal() {
+  document.getElementById('incomplete-modal').classList.add('hidden');
+}
+
 function openExportModal() {
   const modal = document.getElementById('export-name-modal');
   // Apply translated strings
@@ -584,6 +641,18 @@ function closeExportModal() {
 
 function confirmExport() {
   closeExportModal();
+  const issues = checkIncomplete();
+  if (issues.length) {
+    const list = document.getElementById('incomplete-list');
+    list.innerHTML = issues.map(issue => `
+      <li style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span style="font-size:.85rem">${issue.icon} ${issue.text}</span>
+        <button class="btn btn-ghost" style="font-size:.75rem;padding:4px 10px;white-space:nowrap"
+          onclick="closeIncompleteModal();showTab('${issue.tab}')">Go there</button>
+      </li>`).join('');
+    document.getElementById('incomplete-modal').classList.remove('hidden');
+    return;
+  }
   exportData();
 }
 
