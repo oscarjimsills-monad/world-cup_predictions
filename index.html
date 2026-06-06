@@ -2049,7 +2049,7 @@ function alignBracketCards(wrapper, resolved) {
         tpCard.style.cssText = 'margin:0 8px;border-radius:0 0 8px 8px;border-top:none';
         tpSlot.appendChild(tpCard);
 
-        tpSlot.querySelectorAll('.bracket-score-input').forEach(inp => inp.addEventListener('input', onKoInput));
+        tpSlot.querySelectorAll('.bracket-score-input').forEach(inp => inp.addEventListener('input', onKoInput)); // auto-advance handled in bulk after render
         tpSlot.querySelectorAll('.pen-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const mid = +btn.dataset.mid, side = btn.dataset.pens;
@@ -2112,8 +2112,15 @@ function renderKnockout() {
     });
   }
 
-  document.querySelectorAll('.bracket-score-input').forEach(inp => {
-    inp.addEventListener('input', onKoInput);
+  const koInputs = Array.from(document.querySelectorAll('.bracket-score-input:not(:disabled)'));
+  koInputs.forEach((inp, idx) => {
+    inp.addEventListener('input', e => {
+      onKoInput(e);
+      if (inp.value !== '') {
+        const next = koInputs[idx + 1];
+        if (next) { next.focus(); next.select(); }
+      }
+    });
   });
 }
 
