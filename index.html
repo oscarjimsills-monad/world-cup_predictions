@@ -2049,7 +2049,7 @@ function alignBracketCards(wrapper, resolved) {
         tpCard.style.cssText = 'margin:0 8px;border-radius:0 0 8px 8px;border-top:none';
         tpSlot.appendChild(tpCard);
 
-        tpSlot.querySelectorAll('.bracket-score-input').forEach(inp => inp.addEventListener('input', onKoInput)); // auto-advance handled in bulk after render
+        tpSlot.querySelectorAll('.bracket-score-input').forEach(inp => inp.addEventListener('input', onKoInput));
         tpSlot.querySelectorAll('.pen-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const mid = +btn.dataset.mid, side = btn.dataset.pens;
@@ -2112,17 +2112,21 @@ function renderKnockout() {
     });
   }
 
-  const koInputs = Array.from(document.querySelectorAll('.bracket-score-input:not(:disabled)'));
-  koInputs.forEach((inp, idx) => {
-    inp.addEventListener('input', e => {
-      if (inp.value !== '') {
-        const next = koInputs[idx + 1];
-        if (next) _pendingKoFocus = { mid: +next.dataset.mid, side: next.dataset.side };
-      }
-      onKoInput(e);
-    });
+  document.querySelectorAll('.bracket-score-input:not(:disabled)').forEach(inp => {
+    inp.addEventListener('input', onKoInput);
   });
 }
+
+// Delegated auto-advance for all knockout inputs (set up once, works even for late-injected 3rd place)
+document.getElementById('bracket-scroll-container').addEventListener('input', e => {
+  const inp = e.target;
+  if (!inp.classList.contains('bracket-score-input') || inp.disabled || inp.value === '') return;
+  const all = Array.from(document.querySelectorAll('.bracket-score-input:not(:disabled)'));
+  const idx = all.indexOf(inp);
+  if (idx !== -1 && idx < all.length - 1) {
+    _pendingKoFocus = { mid: +all[idx + 1].dataset.mid, side: all[idx + 1].dataset.side };
+  }
+});
 
 let koInputTimer = null;
 let _pendingKoFocus = null;
