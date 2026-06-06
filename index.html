@@ -1019,48 +1019,62 @@ function computeStandings(g) {
     return {gf,ga,pts,gd:gf-ga};
   }
 
-  // Step 2: overall GD → GF → FIFA ranking
-  function sortByOverall(list) {
-    return [...list].sort((a,b) => {
-      const gdA=st[a].gf-st[a].ga, gdB=st[b].gf-st[b].ga;
-      if (gdB!==gdA) return gdB-gdA;
-      if (st[b].gf!==st[a].gf) return st[b].gf-st[a].gf;
-      return (FIFA_RANKINGS[a]||999)-(FIFA_RANKINGS[b]||999);
-    });
-  }
+  // FIFA World Cup tiebreak order (official):
+  // 1. Pts  2. Overall GD  3. Overall GF  4. H2H pts  5. H2H GD  6. H2H GF  7. FIFA ranking
 
-  // Break tie within a group of teams already known to have equal overall pts
   function breakTie(list) {
     if (list.length===1) return list;
-    const h2h = {};
-    list.forEach(t => { h2h[t] = h2hAmong(t, list); });
 
-    // Sort by H2H pts → H2H GD → H2H GF
-    const sorted = [...list].sort((a,b) => {
-      if (h2h[b].pts!==h2h[a].pts) return h2h[b].pts-h2h[a].pts;
-      if (h2h[b].gd!==h2h[a].gd) return h2h[b].gd-h2h[a].gd;
-      return h2h[b].gf-h2h[a].gf;
-    });
-
-    // Split into sub-groups still tied on all three H2H criteria
+    // Step 1: overall GD
+    const byGD = [...list].sort((a,b) => (st[b].gf-st[b].ga) - (st[a].gf-st[a].ga));
     const result = [];
     let i=0;
-    while (i<sorted.length) {
+    while (i<byGD.length) {
       let j=i+1;
-      while (j<sorted.length &&
-             h2h[sorted[j]].pts===h2h[sorted[i]].pts &&
-             h2h[sorted[j]].gd===h2h[sorted[i]].gd &&
-             h2h[sorted[j]].gf===h2h[sorted[i]].gf) j++;
-      const sub = sorted.slice(i,j);
-      if (sub.length===1) {
-        result.push(sub[0]);
-      } else if (sub.length<list.length) {
-        // Partial separation — re-apply H2H among the sub-group
-        result.push(...breakTie(sub));
-      } else {
-        // No H2H separation at all — move to Step 2
-        result.push(...sortByOverall(sub));
+      const gdA = st[byGD[i]].gf-st[byGD[i]].ga;
+      while (j<byGD.length && (st[byGD[j]].gf-st[byGD[j]].ga)===gdA) j++;
+      const sub = byGD.slice(i,j);
+      if (sub.length===1) { result.push(sub[0]); i=j; continue; }
+
+      // Step 2: overall GF
+      const byGF = [...sub].sort((a,b) => st[b].gf-st[a].gf);
+      const result2 = [];
+      let p=0;
+      while (p<byGF.length) {
+        let q=p+1;
+        while (q<byGF.length && st[byGF[q]].gf===st[byGF[p]].gf) q++;
+        const sub2 = byGF.slice(p,q);
+        if (sub2.length===1) { result2.push(sub2[0]); p=q; continue; }
+
+        // Step 3: H2H among still-tied teams
+        const h2h = {};
+        sub2.forEach(t => { h2h[t] = h2hAmong(t, sub2); });
+        const byH2H = [...sub2].sort((a,b) => {
+          if (h2h[b].pts!==h2h[a].pts) return h2h[b].pts-h2h[a].pts;
+          if (h2h[b].gd!==h2h[a].gd) return h2h[b].gd-h2h[a].gd;
+          if (h2h[b].gf!==h2h[a].gf) return h2h[b].gf-h2h[a].gf;
+          return (FIFA_RANKINGS[a]||999)-(FIFA_RANKINGS[b]||999);
+        });
+
+        // Recurse only if H2H partially separates (avoids infinite loop)
+        let r=0;
+        while (r<byH2H.length) {
+          let s=r+1;
+          while (s<byH2H.length &&
+                 h2h[byH2H[s]].pts===h2h[byH2H[r]].pts &&
+                 h2h[byH2H[s]].gd===h2h[byH2H[r]].gd &&
+                 h2h[byH2H[s]].gf===h2h[byH2H[r]].gf) s++;
+          const sub3 = byH2H.slice(r,s);
+          if (sub3.length < sub2.length && sub3.length > 1) {
+            result2.push(...breakTie(sub3));
+          } else {
+            result2.push(...sub3);
+          }
+          r=s;
+        }
+        p=q;
       }
+      result.push(...result2);
       i=j;
     }
     return result;
