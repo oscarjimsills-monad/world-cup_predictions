@@ -293,7 +293,7 @@ main{padding:0;max-width:1600px;margin:0 auto}
     <ul id="incomplete-list" style="list-style:none;margin-bottom:20px;display:flex;flex-direction:column;gap:8px"></ul>
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeIncompleteModal()">Go back</button>
-      <button class="btn btn-primary" style="flex:1" onclick="closeIncompleteModal();exportData()">Download anyway</button>
+      <button class="btn btn-primary" style="flex:1" onclick="closeIncompleteModal();openNameModal()">Download anyway</button>
     </div>
   </div>
 </div>
@@ -626,6 +626,23 @@ function closeIncompleteModal() {
 }
 
 function openExportModal() {
+  // Run incomplete check first
+  const issues = checkIncomplete();
+  if (issues.length) {
+    const list = document.getElementById('incomplete-list');
+    list.innerHTML = issues.map(issue => `
+      <li style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span style="font-size:.85rem">${issue.icon} ${issue.text}</span>
+        <button class="btn btn-ghost" style="font-size:.75rem;padding:4px 10px;white-space:nowrap"
+          onclick="closeIncompleteModal();showTab('${issue.tab}')">Go there</button>
+      </li>`).join('');
+    document.getElementById('incomplete-modal').classList.remove('hidden');
+    return;
+  }
+  openNameModal();
+}
+
+function openNameModal() {
   const modal = document.getElementById('export-name-modal');
   // Apply translated strings
   document.getElementById('export-modal-title').textContent = t('exportModalTitle');
@@ -641,18 +658,6 @@ function closeExportModal() {
 
 function confirmExport() {
   closeExportModal();
-  const issues = checkIncomplete();
-  if (issues.length) {
-    const list = document.getElementById('incomplete-list');
-    list.innerHTML = issues.map(issue => `
-      <li style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <span style="font-size:.85rem">${issue.icon} ${issue.text}</span>
-        <button class="btn btn-ghost" style="font-size:.75rem;padding:4px 10px;white-space:nowrap"
-          onclick="closeIncompleteModal();showTab('${issue.tab}')">Go there</button>
-      </li>`).join('');
-    document.getElementById('incomplete-modal').classList.remove('hidden');
-    return;
-  }
   exportData();
 }
 
