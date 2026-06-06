@@ -261,11 +261,7 @@ main{padding:20px;max-width:1600px;margin:0 auto}
       <div class="card">
         <h3 data-i18n="exportTitle">Export</h3>
         <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px" data-i18n="exportDesc">Download all prediction data — scores, group standings, bracket results — as a JSON file.</p>
-        <div class="award-field" style="margin-bottom:14px">
-          <label style="display:block;font-size:.75rem;color:var(--muted);margin-bottom:5px;font-weight:500" data-i18n="exportNameLabel">Your name</label>
-          <input class="award-input" id="export-name" type="text" data-i18n-placeholder="exportNamePlaceholder" placeholder="e.g. John Smith">
-        </div>
-        <button class="btn btn-primary" onclick="exportData()" style="width:100%" data-i18n="downloadJsonBtn">⬇ Download Predictions JSON</button>
+        <button class="btn btn-primary" onclick="openExportModal()" style="width:100%" data-i18n="downloadJsonBtn">⬇ Download Predictions JSON</button>
       </div>
     </div>
   </div>
@@ -273,6 +269,21 @@ main{padding:20px;max-width:1600px;margin:0 auto}
     <div class="scoring-section" id="scoring-content"></div>
   </div>
 </main>
+
+<!-- Export name modal -->
+<div class="lang-modal-overlay hidden" id="export-name-modal">
+  <div class="lang-modal">
+    <h2 id="export-modal-title">How do you want to be known?</h2>
+    <p id="export-modal-sub" style="margin-bottom:20px">This will be used as your filename.</p>
+    <input class="award-input" id="export-name" type="text" placeholder="e.g. John Smith"
+      style="margin-bottom:16px;font-size:1rem;padding:10px 14px"
+      onkeydown="if(event.key==='Enter')confirmExport()">
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeExportModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" onclick="confirmExport()">⬇ Download</button>
+    </div>
+  </div>
+</div>
 
 <!-- Language selection modal -->
 <div class="lang-modal-overlay hidden" id="lang-modal">
@@ -339,7 +350,8 @@ const T = {
     elimAuto: '— auto —',
     exportTitle: 'Export',
     exportDesc: 'Download all prediction data — scores, group standings, bracket results — as a JSON file.',
-    exportNameLabel: 'Your name',
+    exportModalTitle: 'How do you want to be known?',
+    exportModalSub: 'This will be used as your filename.',
     exportNamePlaceholder: 'e.g. John Smith',
     downloadJsonBtn: '⬇ Download Predictions JSON',
 
@@ -467,7 +479,8 @@ const T = {
     elimAuto: '— auto —',
     exportTitle: 'Exportar',
     exportDesc: 'Descarga todos tus datos de predicción — marcadores, grupos, cuadro — como archivo JSON.',
-    exportNameLabel: 'Tu nombre',
+    exportModalTitle: '¿Cómo quieres que te conozcan?',
+    exportModalSub: 'Se usará como nombre de archivo.',
     exportNamePlaceholder: 'ej. Juan García',
     downloadJsonBtn: '⬇ Descargar Predicciones JSON',
 
@@ -555,6 +568,25 @@ const T = {
 
 function t(key) {
   return (T[lang] && T[lang][key] !== undefined) ? T[lang][key] : (T.en[key] || key);
+}
+
+function openExportModal() {
+  const modal = document.getElementById('export-name-modal');
+  // Apply translated strings
+  document.getElementById('export-modal-title').textContent = t('exportModalTitle');
+  document.getElementById('export-modal-sub').textContent = t('exportModalSub');
+  document.getElementById('export-name').placeholder = t('exportNamePlaceholder');
+  modal.classList.remove('hidden');
+  setTimeout(() => document.getElementById('export-name').focus(), 50);
+}
+
+function closeExportModal() {
+  document.getElementById('export-name-modal').classList.add('hidden');
+}
+
+function confirmExport() {
+  closeExportModal();
+  exportData();
 }
 
 function openLangModal() {
