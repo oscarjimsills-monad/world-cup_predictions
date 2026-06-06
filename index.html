@@ -2115,16 +2115,17 @@ function renderKnockout() {
   const koInputs = Array.from(document.querySelectorAll('.bracket-score-input:not(:disabled)'));
   koInputs.forEach((inp, idx) => {
     inp.addEventListener('input', e => {
-      onKoInput(e);
       if (inp.value !== '') {
         const next = koInputs[idx + 1];
-        if (next) { next.focus(); next.select(); }
+        if (next) _pendingKoFocus = { mid: +next.dataset.mid, side: next.dataset.side };
       }
+      onKoInput(e);
     });
   });
 }
 
 let koInputTimer = null;
+let _pendingKoFocus = null;
 function onKoInput(e) {
   const mid = +e.target.dataset.mid;
   const side = e.target.dataset.side;
@@ -2138,6 +2139,13 @@ function onKoInput(e) {
     renderKnockout();
     updateExport();
     updateProgress();
+    // Restore focus to the next input after re-render
+    if (_pendingKoFocus) {
+      const { mid, side } = _pendingKoFocus;
+      _pendingKoFocus = null;
+      const target = document.querySelector(`.bracket-score-input[data-mid="${mid}"][data-side="${side}"]`);
+      if (target && !target.disabled) { target.focus(); target.select(); }
+    }
   }, 300);
 }
 
