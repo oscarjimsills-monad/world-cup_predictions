@@ -1673,21 +1673,29 @@ function renderGroups() {
         <span class="group-name">${t('groupWord')} ${g}</span>
         <button class="clear-btn" onclick="clearGroup('${g}')">${t('clearBtn')}</button>
       </div>
+      <div class="fixtures-section">${fRows}</div>
+      <div class="group-divider"></div>
       <div style="padding:8px 10px 4px">
         <table class="standings-table">
           <thead><tr><th>${t('colTeam')}</th><th>${t('colGP')}</th><th>${t('colW')}</th><th>${t('colD')}</th><th>${t('colL')}</th><th>Pts</th><th>${t('colGD')}</th><th>${t('colGF')}</th></tr></thead>
           <tbody id="standings-${g}">${rows}</tbody>
         </table>
-      </div>
-      <div class="group-divider"></div>
-      <div class="fixtures-section">${fRows}</div>`;
+      </div>`;
 
     grid.appendChild(card);
   });
 
-  // Attach event listeners
-  document.querySelectorAll('.score-input').forEach(inp => {
-    inp.addEventListener('input', onGroupInput);
+  // Attach event listeners + auto-advance
+  const allInputs = Array.from(document.querySelectorAll('.score-input'));
+  allInputs.forEach((inp, idx) => {
+    inp.addEventListener('input', e => {
+      onGroupInput(e);
+      // Auto-advance to next input once a digit is typed
+      if (inp.value !== '') {
+        const next = allInputs[idx + 1];
+        if (next) { next.focus(); next.select(); }
+      }
+    });
   });
 }
 
