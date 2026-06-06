@@ -191,8 +191,7 @@ main{padding:20px;max-width:1600px;margin:0 auto}
   <div class="header-actions">
     <div class="progress-pill"><span data-i18n="progressLabel">Group matches:</span> <b id="progress-count">0/72</b></div>
     <button class="lang-toggle-btn" onclick="openLangModal()" id="lang-toggle-btn">🇬🇧 EN</button>
-    <button class="btn btn-ghost" onclick="showTab('export')" data-i18n-btn="exportBtn">📊 Export</button>
-    <button class="btn btn-primary" onclick="exportData()" data-i18n-btn="downloadBtn">⬇ Download</button>
+    <button class="btn btn-primary" onclick="showTab('export')" data-i18n-btn="downloadBtn">⬇ Download</button>
   </div>
 </header>
 <nav>
@@ -312,7 +311,6 @@ const T = {
   en: {
     // Header / nav
     progressLabel: 'Group matches:',
-    exportBtn: '📊 Export',
     downloadBtn: '⬇ Download',
     tabGroups: 'Group Stage',
     tabKnockout: 'Knockout Bracket',
@@ -442,7 +440,6 @@ const T = {
   },
   es: {
     progressLabel: 'Partidos:',
-    exportBtn: '📊 Exportar',
     downloadBtn: '⬇ Descargar',
     tabGroups: 'Fase de Grupos',
     tabKnockout: 'Cuadro Eliminatorio',
