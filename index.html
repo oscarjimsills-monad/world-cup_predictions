@@ -204,12 +204,18 @@ main{padding:0;max-width:1600px;margin:0 auto}
 <main>
   <div id="groups-section" class="section active">
     <div class="groups-grid" id="groups-grid"></div>
+    <div id="group-complete-banner" style="display:none;padding:20px;text-align:center">
+      <button class="btn btn-primary" style="font-size:1rem;padding:12px 28px" onclick="showTab('knockout')">🏆 To Knockout Bracket →</button>
+    </div>
   </div>
   <div id="knockout-section" class="section">
     <div id="bracket-scroll-container">
       <div class="bracket-wrapper" id="bracket-wrapper"></div>
     </div>
     <div class="third-place-section" id="third-place-section"></div>
+    <div id="ko-complete-banner" style="display:none;padding:16px;text-align:center;flex-shrink:0">
+      <button class="btn btn-primary" style="font-size:1rem;padding:12px 28px" onclick="showTab('export')">🏅 To Individual Awards & Red Cards →</button>
+    </div>
   </div>
   <div id="export-section" class="section">
     <div class="export-section">
@@ -2079,6 +2085,11 @@ let _tpRafId = null;
 function renderKnockout() {
   if (_tpRafId !== null) { cancelAnimationFrame(_tpRafId); _tpRafId = null; }
   const resolved = recomputeKnockout();
+  const koFilled = Object.keys(knockoutScores).filter(id => {
+    const sc = knockoutScores[id];
+    return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
+  }).length;
+  document.getElementById('ko-complete-banner').style.display = koFilled >= 32 ? 'block' : 'none';
   const getMatch = id => ALL_KO.find(m => m.id === id);
 
   const wrapper = document.getElementById('bracket-wrapper');
@@ -2364,6 +2375,7 @@ function updateExport() {
 
   document.getElementById('exp-group-filled').textContent = `${groupFilled}/72`;
   document.getElementById('exp-ko-filled').textContent = `${koFilled}/32`;
+  document.getElementById('ko-complete-banner').style.display = koFilled >= 32 ? 'block' : 'none';
 
   // Final winner
   const finalRes = recomputeKnockout();
@@ -2415,6 +2427,7 @@ function updateProgress() {
     return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
   }).length;
   document.getElementById('progress-count').textContent = `${filled}/72`;
+  document.getElementById('group-complete-banner').style.display = filled >= 72 ? 'block' : 'none';
 }
 
 function exportData() {
