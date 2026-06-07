@@ -1968,10 +1968,7 @@ function buildStandingsRows(st, g) {
 
 function buildOverridePanel(g) {
   const st = getStandings(g);
-  const ov = groupOrderOverrides[g];
-  const reason = ov ? ov.reason : '';
   const rows = st.map((s, i) => {
-    const involved = isTiedWithNeighbour(st, i);
     const canUp    = i > 0 && statsTied(s, st[i-1]);
     const canDown  = i < st.length-1 && statsTied(s, st[i+1]);
     const upBtn    = canUp   ? `<button class="override-btn" onclick="moveTeamInOverride('${g}',${i},-1)">↑</button>` : '<span style="width:26px"></span>';
@@ -1985,9 +1982,7 @@ function buildOverridePanel(g) {
   return `<div class="override-panel">
     <div class="override-panel-title">Tied teams can be reordered — untied positions are fixed</div>
     ${rows}
-    <input class="override-reason-input" type="text" placeholder="Note why (e.g. fewer yellow cards) — shown below the group"
-      value="${reason.replace(/"/g,'&quot;')}"
-      oninput="setOverrideReason('${g}', this.value)">
+    <div style="font-size:.75rem;color:var(--muted);padding:6px 2px 4px;line-height:1.4">ℹ️ FIFA's tiebreak criteria falls to disciplinary points (yellow/red cards) at this stage. Reorder based on actual card records.</div>
     <div class="override-actions">
       <button class="btn-override-clear" onclick="clearGroupOverride('${g}')">✕ Reset to default</button>
     </div>
@@ -2005,6 +2000,22 @@ function renderGroupCard(g) {
   const tbody = document.getElementById(`standings-${g}`);
   if (tbody) tbody.innerHTML = buildStandingsRows(st, g);
 
+  // If an override exists, check it's still valid (adjacent overridden pairs must still be tied)
+  if (groupOrderOverrides[g] && groupOrderOverrides[g].order) {
+    const overrideOrder = groupOrderOverrides[g].order;
+    const computedMap = {};
+    computeStandings(g).forEach(s => { computedMap[s.team] = s; });
+    let stillValid = false;
+    for (let i = 0; i < overrideOrder.length - 1; i++) {
+      const a = computedMap[overrideOrder[i]], b = computedMap[overrideOrder[i+1]];
+      if (a && b && statsTied(a, b)) { stillValid = true; break; }
+    }
+    if (!stillValid) {
+      delete groupOrderOverrides[g];
+      _overridePanelOpen[g] = false;
+    }
+  }
+
   // Update or create override note
   let note = document.getElementById(`override-note-${g}`);
   if (!note) {
@@ -2013,7 +2024,7 @@ function renderGroupCard(g) {
     note.className = 'override-note';
     card.appendChild(note);
   }
-  note.textContent = (ov && ov.reason) ? `ℹ️ Order adjusted: ${ov.reason}` : '';
+  note.textContent = ov ? 'ℹ️ Order adjusted by disciplinary points' : '';
 
   // Update or create override panel
   let panel = document.getElementById(`override-panel-wrap-${g}`);
@@ -2112,7 +2123,7 @@ function renderThirdOverridePanel() {
   }
 
   const note = document.getElementById('third-override-note');
-  if (note) note.textContent = (thirdPlaceOverride && thirdPlaceOverride.reason) ? `ℹ️ Order adjusted: ${thirdPlaceOverride.reason}` : '';
+  if (note) note.textContent = thirdPlaceOverride ? 'ℹ️ Order adjusted by disciplinary points' : '';
 
   const panel = document.getElementById('third-override-panel');
   if (!panel) return;
@@ -2136,9 +2147,7 @@ function renderThirdOverridePanel() {
   panel.innerHTML = `<div class="override-panel">
     <div class="override-panel-title">Teams with equal stats can be reordered below</div>
     ${rows}
-    <input class="override-reason-input" type="text" placeholder="Note why (e.g. fewer yellow cards) — shown below the table"
-      value="${reason.replace(/"/g,'&quot;')}"
-      oninput="setThirdOverrideReason(this.value)">
+    <div style="font-size:.75rem;color:var(--muted);padding:6px 2px 4px;line-height:1.4">ℹ️ FIFA's tiebreak criteria falls to disciplinary points (yellow/red cards) at this stage. Reorder based on actual card records.</div>
     <div class="override-actions">
       <button class="btn-override-clear" onclick="clearThirdOverride()">✕ Reset to default</button>
     </div>
@@ -2209,7 +2218,7 @@ function renderGroups() {
           <tbody id="standings-${g}">${rows}</tbody>
         </table>
       </div>
-      <p id="override-note-${g}" class="override-note">${(ov && ov.reason) ? `ℹ️ Order adjusted: ${ov.reason}` : ''}</p>
+      <p id="override-note-${g}" class="override-note">${ov ? 'ℹ️ Order adjusted by disciplinary points' : ''}</p>
       <div id="override-panel-wrap-${g}">${_overridePanelOpen[g] ? buildOverridePanel(g) : ''}</div>`;
 
     // Gold border if already complete (loaded from saved state)
@@ -2974,9 +2983,11 @@ function clearGroup(g) {
   if (!confirm(t('clearConfirm')(g))) return;
   FIXTURES.filter(f => f.g === g).forEach(f => {
     delete groupScores[f.id];
-    // Update inputs
     document.querySelectorAll(`[data-fid="${f.id}"]`).forEach(inp => { inp.value = ''; });
   });
+  // Clear any manual override — scores are gone so it's no longer valid
+  delete groupOrderOverrides[g];
+  _overridePanelOpen[g] = false;
   updateGroupCard(g);
   recomputeKnockout();
   renderKnockout();
