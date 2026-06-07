@@ -714,6 +714,12 @@ async function confirmExport(action) {
   const filename = `wc2026${namePart}.json`;
 
   if (action === 'save') {
+    if (!nameRaw) {
+      status.style.color = 'var(--red)';
+      status.textContent = lang === 'es' ? '✗ Introduce tu nombre antes de guardar.' : '✗ Please enter your name before saving.';
+      document.getElementById('export-name').focus();
+      return;
+    }
     status.style.color = 'var(--muted)';
     status.textContent = 'Saving…';
     // Disable buttons during save
