@@ -80,6 +80,22 @@ main{padding:0;max-width:1600px;margin:0 auto}
 .result-home-win input.score-input:first-child{border-color:var(--green);background:rgba(76,175,128,.1)}
 .result-away-win input.score-input:last-child{border-color:var(--green);background:rgba(76,175,128,.1)}
 .group-divider{border-top:2px solid rgba(200,169,81,.2);margin:6px 10px}
+.override-note{font-size:.75rem;color:var(--red);padding:4px 10px 8px;line-height:1.4}
+.override-panel{background:var(--surface2);border-top:1px solid var(--border);padding:8px 10px}
+.override-panel-title{font-size:.72rem;color:var(--muted);margin-bottom:6px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.override-row{display:flex;align-items:center;gap:6px;padding:3px 0}
+.override-team-name{flex:1;font-size:.82rem}
+.override-btn{background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:.7rem;padding:2px 6px;cursor:pointer;line-height:1;transition:all .15s}
+.override-btn:hover{border-color:var(--primary);color:var(--primary)}
+.override-btn:disabled{opacity:.25;cursor:default}
+.override-reason-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:inherit;font-size:.8rem;padding:6px 8px;margin-top:6px}
+.override-reason-input:focus{outline:none;border-color:var(--red)}
+.override-reason-input::placeholder{color:var(--muted)}
+.override-actions{display:flex;gap:6px;margin-top:6px}
+.btn-override-toggle{background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:.72rem;padding:3px 9px;cursor:pointer;transition:all .15s}
+.btn-override-toggle:hover{border-color:var(--primary);color:var(--primary)}
+.btn-override-clear{background:transparent;border:1px solid rgba(224,85,85,.4);border-radius:5px;color:var(--red);font-size:.72rem;padding:3px 9px;cursor:pointer;transition:all .15s}
+.btn-override-clear:hover{background:rgba(224,85,85,.1)}
 
 /* Knockout Bracket */
 #knockout-section.active{overflow:hidden;display:flex;flex-direction:column;height:calc(100vh - 110px)}
@@ -1038,6 +1054,7 @@ let knockoutTeams = {}; // {matchId: {h:team,a:team}} — stored to detect chang
 let tournamentAwards = {}; // {topScorer, bestPlayer, bestGoalkeeper}
 let redCardJokers = []; // [{matchId, home, away}]
 let eliminationOverrides = {}; // {teamName: roundLabel} — user overrides
+let groupOrderOverrides = {}; // {group: {order:[...teams], reason:''}} — manual tiebreak overrides
 
 function loadState() {
   try {
@@ -1048,14 +1065,16 @@ function loadState() {
     tournamentAwards = s.tournamentAwards || {};
     redCardJokers = s.redCardJokers || [];
     eliminationOverrides = s.eliminationOverrides || {};
+    groupOrderOverrides = s.groupOrderOverrides || {};
   } catch(e) {
     groupScores = {}; knockoutScores = {}; knockoutTeams = {};
     tournamentAwards = {}; redCardJokers = []; eliminationOverrides = {};
+    groupOrderOverrides = {};
   }
 }
 
 function saveState() {
-  localStorage.setItem('wc2026', JSON.stringify({groupScores, knockoutScores, knockoutTeams, tournamentAwards, redCardJokers, eliminationOverrides}));
+  localStorage.setItem('wc2026', JSON.stringify({groupScores, knockoutScores, knockoutTeams, tournamentAwards, redCardJokers, eliminationOverrides, groupOrderOverrides}));
 }
 
 // ===================== FIFA WORLD RANKINGS (April 2026) =====================
@@ -1184,7 +1203,7 @@ function computeStandings(g) {
 function getThirdPlace() {
   // Get 3rd-place team from each group
   const thirds = Object.keys(GROUPS).map(g => {
-    const st = computeStandings(g);
+    const st = getStandings(g);
     return st[2] ? {...st[2], group:g} : null;
   }).filter(Boolean);
 
@@ -1704,7 +1723,7 @@ const THIRD_PLACE_SLOTS = {
 function resolveSlot(slot, resolved) {
   if (slot.p !== undefined) {
     // Group position
-    const st = computeStandings(slot.g);
+    const st = getStandings(slot.g);
     return st[slot.p - 1]?.team || null;
   }
   if (slot.third !== undefined) {
@@ -1796,31 +1815,173 @@ function flag(team) {
   return FLAGS[team] ? `<span class="flag">${FLAGS[team]}</span>` : '';
 }
 
+// Returns standings with any manual order override applied
+function getStandings(g) {
+  const computed = computeStandings(g);
+  const ov = groupOrderOverrides[g];
+  if (!ov || !ov.order) return computed;
+  // Re-sort computed rows to match override order, keeping stats intact
+  const map = {};
+  computed.forEach(s => { map[s.team] = s; });
+  const ordered = ov.order.map(t => map[t]).filter(Boolean);
+  // Any teams not in the override order (shouldn't happen) go at the end
+  computed.forEach(s => { if (!ov.order.includes(s.team)) ordered.push(s); });
+  return ordered;
+}
+
+let _overridePanelOpen = {}; // which groups have the panel open
+
+function toggleOverridePanel(g) {
+  _overridePanelOpen[g] = !_overridePanelOpen[g];
+  renderGroupCard(g);
+}
+
+function moveTeamInOverride(g, fromIdx, dir) {
+  const st = getStandings(g);
+  const order = st.map(s => s.team);
+  const toIdx = fromIdx + dir;
+  if (toIdx < 0 || toIdx >= order.length) return;
+  [order[fromIdx], order[toIdx]] = [order[toIdx], order[fromIdx]];
+  const reason = (groupOrderOverrides[g] && groupOrderOverrides[g].reason) || '';
+  groupOrderOverrides[g] = { order, reason };
+  saveState();
+  renderGroupCard(g);
+  recomputeKnockout();
+  renderKnockout();
+  updateExport();
+}
+
+function setOverrideReason(g, val) {
+  if (!groupOrderOverrides[g]) return;
+  groupOrderOverrides[g].reason = val;
+  saveState();
+  // Update the red note without full re-render
+  const note = document.getElementById(`override-note-${g}`);
+  if (note) note.textContent = val ? `⚠️ Manual order: ${val}` : '';
+}
+
+function clearGroupOverride(g) {
+  delete groupOrderOverrides[g];
+  _overridePanelOpen[g] = false;
+  saveState();
+  renderGroupCard(g);
+  recomputeKnockout();
+  renderKnockout();
+  updateExport();
+}
+
+function buildStandingsRows(st, g) {
+  return st.map((s, i) => {
+    const gdClass = s.gd > 0 ? 'gd-pos' : s.gd < 0 ? 'gd-neg' : '';
+    return `<tr>
+      <td><div class="team-name-cell">
+        <span class="pos-badge pos-${i+1}">${i+1}</span>
+        ${flag(s.team)}<span>${s.team}</span>
+      </div></td>
+      <td>${s.gp}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td>
+      <td class="pts-cell">${s.pts}</td>
+      <td class="${gdClass}">${s.gd > 0?'+':''}${s.gd}</td>
+      <td>${s.gf}</td>
+    </tr>`;
+  }).join('');
+}
+
+function buildOverridePanel(g) {
+  const st = getStandings(g);
+  const ov = groupOrderOverrides[g];
+  const reason = ov ? ov.reason : '';
+  const rows = st.map((s, i) => `
+    <div class="override-row">
+      <span class="pos-badge pos-${i+1}" style="flex-shrink:0">${i+1}</span>
+      <span class="override-team-name">${flag(s.team)} ${s.team}</span>
+      <button class="override-btn" onclick="moveTeamInOverride('${g}',${i},-1)" ${i===0?'disabled':''}>↑</button>
+      <button class="override-btn" onclick="moveTeamInOverride('${g}',${i},1)" ${i===st.length-1?'disabled':''}>↓</button>
+    </div>`).join('');
+  return `<div class="override-panel">
+    <div class="override-panel-title">Adjust finishing order</div>
+    ${rows}
+    <input class="override-reason-input" type="text" placeholder="Reason (e.g. disciplinary points — shown in red)"
+      value="${reason.replace(/"/g,'&quot;')}"
+      oninput="setOverrideReason('${g}', this.value)">
+    <div class="override-actions">
+      <button class="btn-override-clear" onclick="clearGroupOverride('${g}')">✕ Clear override</button>
+    </div>
+  </div>`;
+}
+
+function renderGroupCard(g) {
+  const card = document.getElementById(`group-card-${g}`);
+  if (!card) return;
+  const fixtures = FIXTURES.filter(f => f.g === g);
+  const st = getStandings(g);
+  const ov = groupOrderOverrides[g];
+
+  // Update standings tbody
+  const tbody = document.getElementById(`standings-${g}`);
+  if (tbody) tbody.innerHTML = buildStandingsRows(st, g);
+
+  // Update or create override note
+  let note = document.getElementById(`override-note-${g}`);
+  if (!note) {
+    note = document.createElement('p');
+    note.id = `override-note-${g}`;
+    note.className = 'override-note';
+    card.appendChild(note);
+  }
+  note.textContent = (ov && ov.reason) ? `⚠️ Manual order: ${ov.reason}` : '';
+
+  // Update or create override panel
+  let panel = document.getElementById(`override-panel-wrap-${g}`);
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = `override-panel-wrap-${g}`;
+    card.appendChild(panel);
+  }
+  panel.innerHTML = _overridePanelOpen[g] ? buildOverridePanel(g) : '';
+
+  // Update adjust button text
+  const btn = document.getElementById(`override-toggle-${g}`);
+  if (btn) btn.textContent = _overridePanelOpen[g] ? 'Done' : 'Adjust order';
+
+  // Gold border
+  const allFilled = fixtures.every(f => {
+    const sc = groupScores[f.id];
+    return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
+  });
+  card.classList.toggle('complete', allFilled);
+
+  // Fixture row highlighting
+  fixtures.forEach(f => {
+    const sc = groupScores[f.id] || {};
+    const inputs = document.querySelectorAll(`[data-fid="${f.id}"]`);
+    if (!inputs.length) return;
+    const row = inputs[0].closest('.fixture-row');
+    if (!row) return;
+    row.className = 'fixture-row';
+    if (sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '') {
+      const hg = +sc.h, ag = +sc.a;
+      if (!isNaN(hg) && !isNaN(ag)) {
+        if (hg > ag) row.classList.add('result-home-win');
+        else if (ag > hg) row.classList.add('result-away-win');
+      }
+    }
+  });
+}
+
 function renderGroups() {
   const grid = document.getElementById('groups-grid');
   grid.innerHTML = '';
   Object.entries(GROUPS).forEach(([g, teams]) => {
     const fixtures = FIXTURES.filter(f => f.g === g);
-    const st = computeStandings(g);
+    const st = getStandings(g);
+    const ov = groupOrderOverrides[g];
 
     const card = document.createElement('div');
     card.className = 'group-card';
     card.id = `group-card-${g}`;
 
     // Standings
-    const rows = st.map((s,i) => {
-      const gdClass = s.gd > 0 ? 'gd-pos' : s.gd < 0 ? 'gd-neg' : '';
-      return `<tr>
-        <td><div class="team-name-cell">
-          <span class="pos-badge pos-${i+1}">${i+1}</span>
-          ${flag(s.team)}<span>${s.team}</span>
-        </div></td>
-        <td>${s.gp}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td>
-        <td class="pts-cell">${s.pts}</td>
-        <td class="${gdClass}">${s.gd > 0?'+':''}${s.gd}</td>
-        <td>${s.gf}</td>
-      </tr>`;
-    }).join('');
+    const rows = buildStandingsRows(st, g);
 
     // Fixtures
     const fRows = fixtures.map(f => {
@@ -1852,7 +2013,10 @@ function renderGroups() {
     card.innerHTML = `
       <div class="group-header">
         <span class="group-name">${t('groupWord')} ${g}</span>
-        <button class="clear-btn" onclick="clearGroup('${g}')">${t('clearBtn')}</button>
+        <div style="display:flex;gap:6px">
+          <button class="btn-override-toggle" id="override-toggle-${g}" onclick="toggleOverridePanel('${g}')">${_overridePanelOpen[g] ? 'Done' : 'Adjust order'}</button>
+          <button class="clear-btn" onclick="clearGroup('${g}')">${t('clearBtn')}</button>
+        </div>
       </div>
       <div class="fixtures-section">${fRows}</div>
       <div class="group-divider"></div>
@@ -1861,7 +2025,9 @@ function renderGroups() {
           <thead><tr><th>${t('colTeam')}</th><th>${t('colGP')}</th><th>${t('colW')}</th><th>${t('colD')}</th><th>${t('colL')}</th><th>Pts</th><th>${t('colGD')}</th><th>${t('colGF')}</th></tr></thead>
           <tbody id="standings-${g}">${rows}</tbody>
         </table>
-      </div>`;
+      </div>
+      <p id="override-note-${g}" class="override-note">${(ov && ov.reason) ? `⚠️ Manual order: ${ov.reason}` : ''}</p>
+      <div id="override-panel-wrap-${g}">${_overridePanelOpen[g] ? buildOverridePanel(g) : ''}</div>`;
 
     // Gold border if already complete (loaded from saved state)
     const allFilled = fixtures.every(f => {
@@ -1900,22 +2066,10 @@ function renderGroups() {
 }
 
 function updateGroupCard(g) {
-  const st = computeStandings(g);
+  const st = getStandings(g);
   const tbody = document.getElementById(`standings-${g}`);
   if (!tbody) return;
-  tbody.innerHTML = st.map((s,i) => {
-    const gdClass = s.gd > 0 ? 'gd-pos' : s.gd < 0 ? 'gd-neg' : '';
-    return `<tr>
-      <td><div class="team-name-cell">
-        <span class="pos-badge pos-${i+1}">${i+1}</span>
-        ${flag(s.team)}<span>${s.team}</span>
-      </div></td>
-      <td>${s.gp}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td>
-      <td class="pts-cell">${s.pts}</td>
-      <td class="${gdClass}">${s.gd > 0?'+':''}${s.gd}</td>
-      <td>${s.gf}</td>
-    </tr>`;
-  }).join('');
+  tbody.innerHTML = buildStandingsRows(st, g);
 
   // Gold border when all 6 group fixtures are filled
   const groupFixtures = FIXTURES.filter(f => f.g === g);
@@ -2567,7 +2721,7 @@ function updateProgress() {
 function buildExportData() {
   const resolved = recomputeKnockout();
   const standings = {};
-  Object.keys(GROUPS).forEach(g => { standings[g] = computeStandings(g); });
+  Object.keys(GROUPS).forEach(g => { standings[g] = getStandings(g); });
   const thirds = getThirdPlace();
 
   const koResults = {};
