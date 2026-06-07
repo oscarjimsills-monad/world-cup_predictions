@@ -284,12 +284,12 @@ main{padding:0;max-width:1600px;margin:0 auto}
     <p id="export-modal-sub" style="margin-bottom:20px">This will be used as your filename.</p>
     <input class="award-input" id="export-name" type="text" placeholder="e.g. John Smith"
       style="margin-bottom:16px;font-size:1rem;padding:10px 14px"
-      onkeydown="if(event.key==='Enter')confirmExport()">
-    <p id="save-status" style="font-size:.78rem;color:var(--muted);min-height:1.2em;margin-bottom:4px;text-align:center"></p>
+      onkeydown="if(event.key==='Enter')confirmExport('save')">
+    <p id="save-status" style="font-size:.78rem;color:var(--muted);min-height:1.2em;margin-bottom:8px;text-align:center"></p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeExportModal()">Cancel</button>
-      <button class="btn btn-ghost" style="flex:1" onclick="confirmExport(false)">⬇ Download</button>
-      <button class="btn btn-primary" style="flex:2" onclick="confirmExport(true)">☁️ Save & Download</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeExportModal()" id="export-cancel-btn">Cancel</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="confirmExport('download')" id="export-download-btn">⬇ Download</button>
+      <button class="btn btn-primary" style="flex:1" onclick="confirmExport('save')" id="export-save-btn">☁️ Save</button>
     </div>
   </div>
 </div>
@@ -322,6 +322,15 @@ main{padding:0;max-width:1600px;margin:0 auto}
         <span>Español</span>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- What's new modal -->
+<div class="lang-modal-overlay hidden" id="whats-new-modal">
+  <div class="lang-modal" style="max-width:440px">
+    <h2 style="color:var(--primary);margin-bottom:12px">🆕 What's new</h2>
+    <p id="whats-new-text" style="color:var(--muted);font-size:.9rem;line-height:1.65;margin-bottom:24px"></p>
+    <button class="btn btn-primary" style="width:100%" onclick="closeWhatsNew()">OK</button>
   </div>
 </div>
 
@@ -375,6 +384,10 @@ const T = {
     exportModalSub: 'This will be used as your filename.',
     exportNamePlaceholder: 'e.g. John Smith',
     downloadJsonBtn: '⬇ Download Predictions JSON',
+    exportCancelBtn: 'Cancel',
+    exportDownloadBtn: '⬇ Download',
+    exportSaveBtn: '☁️ Save',
+    whatsNewText: "You can now save your predictions directly — no download needed. Hit ☁️ Save in the export menu and your predictions are sent to the organiser automatically. Download is still there if you want a local copy.",
 
     // Groups
     groupWord: 'GROUP',
@@ -503,6 +516,10 @@ const T = {
     exportModalSub: 'Se usará como nombre de archivo.',
     exportNamePlaceholder: 'ej. Juan García',
     downloadJsonBtn: '⬇ Descargar Predicciones JSON',
+    exportCancelBtn: 'Cancelar',
+    exportDownloadBtn: '⬇ Descargar',
+    exportSaveBtn: '☁️ Guardar',
+    whatsNewText: "Ya puedes guardar tus predicciones directamente, sin necesidad de descargar nada. Pulsa ☁️ Guardar en el menú de exportación y tus predicciones se enviarán al organizador automáticamente. La descarga sigue disponible si quieres una copia local.",
 
     groupWord: 'GRUPO',
     clearBtn: '✕ Borrar',
@@ -657,6 +674,13 @@ function openNameModal() {
   document.getElementById('export-modal-title').textContent = t('exportModalTitle');
   document.getElementById('export-modal-sub').textContent = t('exportModalSub');
   document.getElementById('export-name').placeholder = t('exportNamePlaceholder');
+  document.getElementById('export-cancel-btn').textContent = t('exportCancelBtn');
+  document.getElementById('export-download-btn').textContent = t('exportDownloadBtn');
+  document.getElementById('export-save-btn').textContent = t('exportSaveBtn');
+  // Reset status message
+  const status = document.getElementById('save-status');
+  status.textContent = '';
+  status.style.color = 'var(--muted)';
   modal.classList.remove('hidden');
   setTimeout(() => document.getElementById('export-name').focus(), 50);
 }
@@ -665,28 +689,37 @@ function closeExportModal() {
   document.getElementById('export-name-modal').classList.add('hidden');
 }
 
-async function confirmExport(save) {
-  if (save) {
-    const status = document.getElementById('save-status');
+async function confirmExport(action) {
+  const status = document.getElementById('save-status');
+  const nameRaw = (document.getElementById('export-name')?.value || '').trim();
+  const namePart = nameRaw ? '_' + nameRaw.replace(/\s+/g, '_') : '';
+  const filename = `wc2026${namePart}.json`;
+
+  if (action === 'save') {
     status.style.color = 'var(--muted)';
     status.textContent = 'Saving…';
+    // Disable buttons during save
+    document.getElementById('export-save-btn').disabled = true;
+    document.getElementById('export-download-btn').disabled = true;
     const data = buildExportData();
-    const nameRaw = (document.getElementById('export-name')?.value || '').trim();
-    const namePart = nameRaw ? '_' + nameRaw.replace(/\s+/g, '_') : '';
-    const filename = `wc2026${namePart}.json`;
     const ok = await saveToFormspree(filename, data);
+    document.getElementById('export-save-btn').disabled = false;
+    document.getElementById('export-download-btn').disabled = false;
     if (ok) {
       status.style.color = 'var(--green)';
-      status.textContent = '✓ Saved! Downloading…';
-      await new Promise(r => setTimeout(r, 800));
+      status.textContent = '✓ Predictions saved!';
     } else {
       status.style.color = 'var(--red)';
-      status.textContent = '✗ Save failed — downloading locally only.';
-      await new Promise(r => setTimeout(r, 1200));
+      status.textContent = '✗ Save failed — check your connection and try again.';
     }
+    // Don't close — let user see the result, close manually or download too
+    return;
   }
-  closeExportModal();
-  exportData();
+
+  if (action === 'download') {
+    closeExportModal();
+    exportData();
+  }
 }
 
 function openLangModal() {
@@ -698,6 +731,16 @@ function setLang(l) {
   localStorage.setItem('wc2026_lang', l);
   document.getElementById('lang-modal').classList.add('hidden');
   applyLang();
+  // Show what's new notice only once per device
+  if (!localStorage.getItem('wc2026_whats_new_v1')) {
+    document.getElementById('whats-new-text').textContent = t('whatsNewText');
+    document.getElementById('whats-new-modal').classList.remove('hidden');
+  }
+}
+
+function closeWhatsNew() {
+  localStorage.setItem('wc2026_whats_new_v1', '1');
+  document.getElementById('whats-new-modal').classList.add('hidden');
 }
 
 function applyLang() {
