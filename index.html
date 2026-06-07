@@ -1896,6 +1896,21 @@ function statsTied(a, b) {
   return a.pts === b.pts && a.gd === b.gd && a.gf === b.gf;
 }
 
+// True if any adjacent pair in a list is tied
+function hasTies(list) {
+  for (let i = 0; i < list.length - 1; i++) {
+    if (statsTied(list[i], list[i+1])) return true;
+  }
+  return false;
+}
+
+// True if a team is involved in any tie with its neighbour(s)
+function isTiedWithNeighbour(list, i) {
+  if (i > 0 && statsTied(list[i], list[i-1])) return true;
+  if (i < list.length - 1 && statsTied(list[i], list[i+1])) return true;
+  return false;
+}
+
 function toggleOverridePanel(g) {
   _overridePanelOpen[g] = !_overridePanelOpen[g];
   renderGroupCard(g);
@@ -1956,17 +1971,19 @@ function buildOverridePanel(g) {
   const ov = groupOrderOverrides[g];
   const reason = ov ? ov.reason : '';
   const rows = st.map((s, i) => {
-    const canUp   = i > 0 && statsTied(s, st[i-1]);
-    const canDown = i < st.length-1 && statsTied(s, st[i+1]);
+    const involved = isTiedWithNeighbour(st, i);
+    const canUp    = i > 0 && statsTied(s, st[i-1]);
+    const canDown  = i < st.length-1 && statsTied(s, st[i+1]);
+    const upBtn    = involved ? `<button class="override-btn" onclick="moveTeamInOverride('${g}',${i},-1)" ${canUp?'':'disabled'}>↑</button>` : '<span style="width:26px"></span>';
+    const downBtn  = involved ? `<button class="override-btn" onclick="moveTeamInOverride('${g}',${i},1)" ${canDown?'':'disabled'}>↓</button>` : '<span style="width:26px"></span>';
     return `<div class="override-row">
       <span class="pos-badge pos-${i+1}" style="flex-shrink:0">${i+1}</span>
       <span class="override-team-name">${flag(s.team)} ${s.team}</span>
-      <button class="override-btn" onclick="moveTeamInOverride('${g}',${i},-1)" ${canUp?'':'disabled'}>↑</button>
-      <button class="override-btn" onclick="moveTeamInOverride('${g}',${i},1)" ${canDown?'':'disabled'}>↓</button>
+      ${upBtn}${downBtn}
     </div>`;
   }).join('');
   return `<div class="override-panel">
-    <div class="override-panel-title">Teams with equal stats can be reordered below</div>
+    <div class="override-panel-title">Tied teams can be reordered — untied positions are fixed</div>
     ${rows}
     <input class="override-reason-input" type="text" placeholder="Note why (e.g. fewer yellow cards) — shown below the group"
       value="${reason.replace(/"/g,'&quot;')}"
@@ -2007,9 +2024,17 @@ function renderGroupCard(g) {
   }
   panel.innerHTML = _overridePanelOpen[g] ? buildOverridePanel(g) : '';
 
-  // Update adjust button text
+  // Update adjust button — only show if ties exist
   const btn = document.getElementById(`override-toggle-${g}`);
-  if (btn) btn.textContent = _overridePanelOpen[g] ? 'Done' : 'Adjust order';
+  if (btn) {
+    const tied = hasTies(getStandings(g));
+    if (tied && btn.tagName === 'BUTTON') {
+      btn.textContent = _overridePanelOpen[g] ? 'Done' : 'Adjust order';
+    } else if (!tied) {
+      btn.textContent = '';
+      btn.style.display = 'none';
+    }
+  }
 
   // Gold border
   const allFilled = fixtures.every(f => {
@@ -2078,7 +2103,12 @@ function clearThirdOverride() {
 
 function renderThirdOverridePanel() {
   const btn = document.getElementById('third-override-toggle');
-  if (btn) btn.textContent = _thirdOverridePanelOpen ? 'Done' : 'Adjust order';
+  if (btn) {
+    const ranked = getThirdPlaceRanked();
+    const tied = hasTies(ranked);
+    btn.style.display = tied ? '' : 'none';
+    btn.textContent = _thirdOverridePanelOpen ? 'Done' : 'Adjust order';
+  }
 
   const note = document.getElementById('third-override-note');
   if (note) note.textContent = (thirdPlaceOverride && thirdPlaceOverride.reason) ? `ℹ️ Order adjusted: ${thirdPlaceOverride.reason}` : '';
@@ -2090,13 +2120,15 @@ function renderThirdOverridePanel() {
   const ranked = getThirdPlaceRanked();
   const reason = thirdPlaceOverride ? thirdPlaceOverride.reason : '';
   const rows = ranked.map((s, i) => {
-    const canUp   = i > 0 && statsTied(s, ranked[i-1]);
-    const canDown = i < ranked.length-1 && statsTied(s, ranked[i+1]);
+    const involved = isTiedWithNeighbour(ranked, i);
+    const canUp    = i > 0 && statsTied(s, ranked[i-1]);
+    const canDown  = i < ranked.length-1 && statsTied(s, ranked[i+1]);
+    const upBtn    = involved ? `<button class="override-btn" onclick="moveThirdTeam(${i},-1)" ${canUp?'':'disabled'}>↑</button>` : '<span style="width:26px"></span>';
+    const downBtn  = involved ? `<button class="override-btn" onclick="moveThirdTeam(${i},1)" ${canDown?'':'disabled'}>↓</button>` : '<span style="width:26px"></span>';
     return `<div class="override-row">
       <span style="font-size:.72rem;color:var(--muted);width:18px;text-align:right;flex-shrink:0">${i+1}</span>
       <span class="override-team-name" style="${i===7?'border-bottom:1px dashed var(--primary);padding-bottom:3px':''}">${FLAGS[s.team]||''} ${s.team} <span style="font-size:.7rem;color:var(--muted)">(${t('groupPrefix')}${s.group}, ${s.pts}pts)</span></span>
-      <button class="override-btn" onclick="moveThirdTeam(${i},-1)" ${canUp?'':'disabled'}>↑</button>
-      <button class="override-btn" onclick="moveThirdTeam(${i},1)" ${canDown?'':'disabled'}>↓</button>
+      ${upBtn}${downBtn}
     </div>${i===7?`<div style="font-size:.7rem;color:var(--primary);margin:2px 0 4px 22px">— qualification boundary —</div>`:''}`
   }).join('');
 
@@ -2158,7 +2190,7 @@ function renderGroups() {
       <div class="group-header">
         <span class="group-name">${t('groupWord')} ${g}</span>
         <div style="display:flex;gap:6px">
-          <button class="btn-override-toggle" id="override-toggle-${g}" onclick="toggleOverridePanel('${g}')">${_overridePanelOpen[g] ? 'Done' : 'Adjust order'}</button>
+          ${hasTies(st) ? `<button class="btn-override-toggle" id="override-toggle-${g}" onclick="toggleOverridePanel('${g}')">${_overridePanelOpen[g] ? 'Done' : 'Adjust order'}</button>` : `<span id="override-toggle-${g}"></span>`}
           <button class="clear-btn" onclick="clearGroup('${g}')">${t('clearBtn')}</button>
         </div>
       </div>
