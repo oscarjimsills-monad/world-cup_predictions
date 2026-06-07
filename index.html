@@ -297,12 +297,12 @@ main{padding:0;max-width:1600px;margin:0 auto}
 <!-- Incomplete warning modal -->
 <div class="lang-modal-overlay hidden" id="incomplete-modal">
   <div class="lang-modal" style="max-width:480px">
-    <h2 style="color:var(--primary);margin-bottom:8px">⚠️ Not quite done!</h2>
-    <p style="margin-bottom:16px;color:var(--muted);font-size:.88rem">The following sections are incomplete:</p>
+    <h2 id="incomplete-title" style="color:var(--primary);margin-bottom:8px">⚠️ Not quite done!</h2>
+    <p id="incomplete-intro" style="margin-bottom:16px;color:var(--muted);font-size:.88rem">The following sections are incomplete:</p>
     <ul id="incomplete-list" style="list-style:none;margin-bottom:20px;display:flex;flex-direction:column;gap:8px"></ul>
     <div style="display:flex;gap:10px">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeIncompleteModal()">Go back</button>
-      <button class="btn btn-primary" style="flex:1" onclick="closeIncompleteModal();openNameModal()">Download anyway</button>
+      <button id="incomplete-back-btn" class="btn btn-ghost" style="flex:1" onclick="closeIncompleteModal()">Go back</button>
+      <button id="incomplete-anyway-btn" class="btn btn-primary" style="flex:1" onclick="closeIncompleteModal();openNameModal()">Download anyway</button>
     </div>
   </div>
 </div>
@@ -388,6 +388,17 @@ const T = {
     exportDownloadBtn: '⬇ Download',
     exportSaveBtn: '☁️ Save',
     whatsNewText: "You can now save your predictions directly — no download needed. Hit ☁️ Save in the export menu and your predictions are sent to the organiser automatically. Download is still there if you want a local copy.",
+    incompleteTitle: '⚠️ Not quite done!',
+    incompleteIntro: 'The following sections are incomplete:',
+    incompleteGoBack: 'Go back',
+    incompleteDownloadAnyway: 'Download anyway',
+    incompleteGoThere: 'Go there',
+    incompleteGroupStage: g => `Group Stage — ${g} match${g > 1 ? 'es' : ''} unfilled`,
+    incompleteKnockout: g => `Knockout Bracket — ${g} match${g > 1 ? 'es' : ''} unfilled`,
+    incompleteAwards: a => `Awards — ${a} missing`,
+    incompleteGoldenBoot: 'Golden Boot',
+    incompleteGoldenBall: 'Golden Ball',
+    incompleteGoldenGlove: 'Golden Glove',
 
     // Groups
     groupWord: 'GROUP',
@@ -520,6 +531,17 @@ const T = {
     exportDownloadBtn: '⬇ Descargar',
     exportSaveBtn: '☁️ Guardar',
     whatsNewText: "Ya puedes guardar tus predicciones directamente, sin necesidad de descargar nada. Pulsa ☁️ Guardar en el menú de exportación y tus predicciones se enviarán al organizador automáticamente. La descarga sigue disponible si quieres una copia local.",
+    incompleteTitle: '⚠️ ¡Aún no has terminado!',
+    incompleteIntro: 'Las siguientes secciones están incompletas:',
+    incompleteGoBack: 'Volver',
+    incompleteDownloadAnyway: 'Descargar igualmente',
+    incompleteGoThere: 'Ir ahí',
+    incompleteGroupStage: g => `Fase de Grupos — ${g} partido${g > 1 ? 's' : ''} sin rellenar`,
+    incompleteKnockout: g => `Cuadro Eliminatorio — ${g} partido${g > 1 ? 's' : ''} sin rellenar`,
+    incompleteAwards: a => `Premios — falta: ${a}`,
+    incompleteGoldenBoot: 'Bota de Oro',
+    incompleteGoldenBall: 'Balón de Oro',
+    incompleteGoldenGlove: 'Guante de Oro',
 
     groupWord: 'GRUPO',
     clearBtn: '✕ Borrar',
@@ -615,10 +637,7 @@ function checkIncomplete() {
     const sc = groupScores[id]; return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
   }).length;
   if (groupFilled < 72) {
-    issues.push({
-      text: `Group Stage — ${72 - groupFilled} match${72 - groupFilled > 1 ? 'es' : ''} unfilled`,
-      tab: 'groups', icon: '⚽'
-    });
+    issues.push({ text: t('incompleteGroupStage')(72 - groupFilled), tab: 'groups', icon: '⚽' });
   }
 
   // Knockout bracket
@@ -626,22 +645,16 @@ function checkIncomplete() {
     const sc = knockoutScores[id]; return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
   }).length;
   if (koFilled < 32) {
-    issues.push({
-      text: `Knockout Bracket — ${32 - koFilled} match${32 - koFilled > 1 ? 'es' : ''} unfilled`,
-      tab: 'knockout', icon: '🏆'
-    });
+    issues.push({ text: t('incompleteKnockout')(32 - koFilled), tab: 'knockout', icon: '🏆' });
   }
 
   // Tournament awards
   const missingAwards = [];
-  if (!tournamentAwards.topScorer)     missingAwards.push('Golden Boot');
-  if (!tournamentAwards.bestPlayer)    missingAwards.push('Golden Ball');
-  if (!tournamentAwards.bestGoalkeeper) missingAwards.push('Golden Glove');
+  if (!tournamentAwards.topScorer)      missingAwards.push(t('incompleteGoldenBoot'));
+  if (!tournamentAwards.bestPlayer)     missingAwards.push(t('incompleteGoldenBall'));
+  if (!tournamentAwards.bestGoalkeeper) missingAwards.push(t('incompleteGoldenGlove'));
   if (missingAwards.length) {
-    issues.push({
-      text: `Awards — ${missingAwards.join(', ')} missing`,
-      tab: 'export', icon: '🏅'
-    });
+    issues.push({ text: t('incompleteAwards')(missingAwards.join(', ')), tab: 'export', icon: '🏅' });
   }
 
   return issues;
@@ -655,12 +668,17 @@ function openExportModal() {
   // Run incomplete check first
   const issues = checkIncomplete();
   if (issues.length) {
+    // Translate static modal text
+    document.getElementById('incomplete-title').textContent = t('incompleteTitle');
+    document.getElementById('incomplete-intro').textContent = t('incompleteIntro');
+    document.getElementById('incomplete-back-btn').textContent = t('incompleteGoBack');
+    document.getElementById('incomplete-anyway-btn').textContent = t('incompleteDownloadAnyway');
     const list = document.getElementById('incomplete-list');
     list.innerHTML = issues.map(issue => `
       <li style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
         <span style="font-size:.85rem">${issue.icon} ${issue.text}</span>
         <button class="btn btn-ghost" style="font-size:.75rem;padding:4px 10px;white-space:nowrap"
-          onclick="closeIncompleteModal();showTab('${issue.tab}')">Go there</button>
+          onclick="closeIncompleteModal();showTab('${issue.tab}')">${t('incompleteGoThere')}</button>
       </li>`).join('');
     document.getElementById('incomplete-modal').classList.remove('hidden');
     return;
