@@ -2114,6 +2114,23 @@ function clearThirdOverride() {
 }
 
 function renderThirdOverridePanel() {
+  // If an override exists, check it's still valid
+  if (thirdPlaceOverride && thirdPlaceOverride.order) {
+    const overrideOrder = thirdPlaceOverride.order;
+    const computedMap = {};
+    getThirdPlace().forEach(s => { computedMap[s.team] = s; });
+    let stillValid = false;
+    for (let i = 0; i < overrideOrder.length - 1; i++) {
+      const a = computedMap[overrideOrder[i]], b = computedMap[overrideOrder[i+1]];
+      if (a && b && statsTied(a, b)) { stillValid = true; break; }
+    }
+    if (!stillValid) {
+      thirdPlaceOverride = null;
+      _thirdOverridePanelOpen = false;
+      saveState();
+    }
+  }
+
   const btn = document.getElementById('third-override-toggle');
   if (btn) {
     const ranked = getThirdPlaceRanked();
@@ -2254,6 +2271,29 @@ function renderGroups() {
 }
 
 function updateGroupCard(g) {
+  // If an override exists, check it's still valid (needs at least one tied adjacent pair)
+  if (groupOrderOverrides[g] && groupOrderOverrides[g].order) {
+    const overrideOrder = groupOrderOverrides[g].order;
+    const computedMap = {};
+    computeStandings(g).forEach(s => { computedMap[s.team] = s; });
+    let stillValid = false;
+    for (let i = 0; i < overrideOrder.length - 1; i++) {
+      const a = computedMap[overrideOrder[i]], b = computedMap[overrideOrder[i+1]];
+      if (a && b && statsTied(a, b)) { stillValid = true; break; }
+    }
+    if (!stillValid) {
+      delete groupOrderOverrides[g];
+      _overridePanelOpen[g] = false;
+      // Update the note and panel too
+      const note = document.getElementById(`override-note-${g}`);
+      if (note) note.textContent = '';
+      const panel = document.getElementById(`override-panel-wrap-${g}`);
+      if (panel) panel.innerHTML = '';
+      const btn = document.getElementById(`override-toggle-${g}`);
+      if (btn) { btn.textContent = ''; btn.style.display = 'none'; }
+    }
+  }
+
   const st = getStandings(g);
   const tbody = document.getElementById(`standings-${g}`);
   if (!tbody) return;
@@ -2284,6 +2324,20 @@ function updateGroupCard(g) {
       }
     }
   });
+
+  // Update "Adjust order" button visibility
+  const btn = document.getElementById(`override-toggle-${g}`);
+  if (btn) {
+    const stNow = getStandings(g);
+    const groupFixtures2 = FIXTURES.filter(f => f.g === g);
+    const allFilled2 = groupFixtures2.every(f => {
+      const sc = groupScores[f.id];
+      return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
+    });
+    const showBtn = allFilled2 && hasTies(stNow);
+    btn.textContent = showBtn ? (_overridePanelOpen[g] ? 'Done' : 'Adjust order') : '';
+    btn.style.display = showBtn ? '' : 'none';
+  }
 }
 
 let groupInputTimer = null;
