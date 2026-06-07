@@ -80,7 +80,7 @@ main{padding:0;max-width:1600px;margin:0 auto}
 .result-home-win input.score-input:first-child{border-color:var(--green);background:rgba(76,175,128,.1)}
 .result-away-win input.score-input:last-child{border-color:var(--green);background:rgba(76,175,128,.1)}
 .group-divider{border-top:2px solid rgba(200,169,81,.2);margin:6px 10px}
-.override-note{font-size:.75rem;color:var(--red);padding:4px 10px 8px;line-height:1.4}
+.override-note{font-size:.75rem;color:var(--primary);padding:4px 10px 8px;line-height:1.4}
 .override-panel{background:var(--surface2);border-top:1px solid var(--border);padding:8px 10px}
 .override-panel-title{font-size:.72rem;color:var(--muted);margin-bottom:6px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
 .override-row{display:flex;align-items:center;gap:6px;padding:3px 0}
@@ -89,7 +89,7 @@ main{padding:0;max-width:1600px;margin:0 auto}
 .override-btn:hover{border-color:var(--primary);color:var(--primary)}
 .override-btn:disabled{opacity:.25;cursor:default}
 .override-reason-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:inherit;font-size:.8rem;padding:6px 8px;margin-top:6px}
-.override-reason-input:focus{outline:none;border-color:var(--red)}
+.override-reason-input:focus{outline:none;border-color:var(--primary)}
 .override-reason-input::placeholder{color:var(--muted)}
 .override-actions{display:flex;gap:6px;margin-top:6px}
 .btn-override-toggle{background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:.72rem;padding:3px 9px;cursor:pointer;transition:all .15s}
@@ -1891,6 +1891,11 @@ function getStandings(g) {
 let _overridePanelOpen = {}; // which groups have the panel open
 let _thirdOverridePanelOpen = false;
 
+// Two standings entries are "swappable" only if stats alone don't separate them
+function statsTied(a, b) {
+  return a.pts === b.pts && a.gd === b.gd && a.gf === b.gf;
+}
+
 function toggleOverridePanel(g) {
   _overridePanelOpen[g] = !_overridePanelOpen[g];
   renderGroupCard(g);
@@ -1917,7 +1922,7 @@ function setOverrideReason(g, val) {
   saveState();
   // Update the red note without full re-render
   const note = document.getElementById(`override-note-${g}`);
-  if (note) note.textContent = val ? `⚠️ Manual order: ${val}` : '';
+  if (note) note.textContent = val ? `ℹ️ Order adjusted: ${val}` : '';
 }
 
 function clearGroupOverride(g) {
@@ -1950,21 +1955,24 @@ function buildOverridePanel(g) {
   const st = getStandings(g);
   const ov = groupOrderOverrides[g];
   const reason = ov ? ov.reason : '';
-  const rows = st.map((s, i) => `
-    <div class="override-row">
+  const rows = st.map((s, i) => {
+    const canUp   = i > 0 && statsTied(s, st[i-1]);
+    const canDown = i < st.length-1 && statsTied(s, st[i+1]);
+    return `<div class="override-row">
       <span class="pos-badge pos-${i+1}" style="flex-shrink:0">${i+1}</span>
       <span class="override-team-name">${flag(s.team)} ${s.team}</span>
-      <button class="override-btn" onclick="moveTeamInOverride('${g}',${i},-1)" ${i===0?'disabled':''}>↑</button>
-      <button class="override-btn" onclick="moveTeamInOverride('${g}',${i},1)" ${i===st.length-1?'disabled':''}>↓</button>
-    </div>`).join('');
+      <button class="override-btn" onclick="moveTeamInOverride('${g}',${i},-1)" ${canUp?'':'disabled'}>↑</button>
+      <button class="override-btn" onclick="moveTeamInOverride('${g}',${i},1)" ${canDown?'':'disabled'}>↓</button>
+    </div>`;
+  }).join('');
   return `<div class="override-panel">
-    <div class="override-panel-title">Adjust finishing order</div>
+    <div class="override-panel-title">Teams with equal stats can be reordered below</div>
     ${rows}
-    <input class="override-reason-input" type="text" placeholder="Reason (e.g. disciplinary points — shown in red)"
+    <input class="override-reason-input" type="text" placeholder="Note why (e.g. fewer yellow cards) — shown below the group"
       value="${reason.replace(/"/g,'&quot;')}"
       oninput="setOverrideReason('${g}', this.value)">
     <div class="override-actions">
-      <button class="btn-override-clear" onclick="clearGroupOverride('${g}')">✕ Clear override</button>
+      <button class="btn-override-clear" onclick="clearGroupOverride('${g}')">✕ Reset to default</button>
     </div>
   </div>`;
 }
@@ -1988,7 +1996,7 @@ function renderGroupCard(g) {
     note.className = 'override-note';
     card.appendChild(note);
   }
-  note.textContent = (ov && ov.reason) ? `⚠️ Manual order: ${ov.reason}` : '';
+  note.textContent = (ov && ov.reason) ? `ℹ️ Order adjusted: ${ov.reason}` : '';
 
   // Update or create override panel
   let panel = document.getElementById(`override-panel-wrap-${g}`);
@@ -2055,7 +2063,7 @@ function setThirdOverrideReason(val) {
   thirdPlaceOverride.reason = val;
   saveState();
   const note = document.getElementById('third-override-note');
-  if (note) note.textContent = val ? `⚠️ Manual order: ${val}` : '';
+  if (note) note.textContent = val ? `ℹ️ Order adjusted: ${val}` : '';
 }
 
 function clearThirdOverride() {
@@ -2073,7 +2081,7 @@ function renderThirdOverridePanel() {
   if (btn) btn.textContent = _thirdOverridePanelOpen ? 'Done' : 'Adjust order';
 
   const note = document.getElementById('third-override-note');
-  if (note) note.textContent = (thirdPlaceOverride && thirdPlaceOverride.reason) ? `⚠️ Manual order: ${thirdPlaceOverride.reason}` : '';
+  if (note) note.textContent = (thirdPlaceOverride && thirdPlaceOverride.reason) ? `ℹ️ Order adjusted: ${thirdPlaceOverride.reason}` : '';
 
   const panel = document.getElementById('third-override-panel');
   if (!panel) return;
@@ -2081,22 +2089,25 @@ function renderThirdOverridePanel() {
 
   const ranked = getThirdPlaceRanked();
   const reason = thirdPlaceOverride ? thirdPlaceOverride.reason : '';
-  const rows = ranked.map((s, i) => `
-    <div class="override-row">
+  const rows = ranked.map((s, i) => {
+    const canUp   = i > 0 && statsTied(s, ranked[i-1]);
+    const canDown = i < ranked.length-1 && statsTied(s, ranked[i+1]);
+    return `<div class="override-row">
       <span style="font-size:.72rem;color:var(--muted);width:18px;text-align:right;flex-shrink:0">${i+1}</span>
-      <span class="override-team-name" style="${i===7?'border-bottom:1px dashed var(--red);padding-bottom:3px':''}">${FLAGS[s.team]||''} ${s.team} <span style="font-size:.7rem;color:var(--muted)">(${t('groupPrefix')}${s.group}, ${s.pts}pts)</span></span>
-      <button class="override-btn" onclick="moveThirdTeam(${i},-1)" ${i===0?'disabled':''}>↑</button>
-      <button class="override-btn" onclick="moveThirdTeam(${i},1)" ${i===ranked.length-1?'disabled':''}>↓</button>
-    </div>${i===7?`<div style="font-size:.7rem;color:var(--red);margin:2px 0 4px 22px">— qualification boundary —</div>`:''}`).join('');
+      <span class="override-team-name" style="${i===7?'border-bottom:1px dashed var(--primary);padding-bottom:3px':''}">${FLAGS[s.team]||''} ${s.team} <span style="font-size:.7rem;color:var(--muted)">(${t('groupPrefix')}${s.group}, ${s.pts}pts)</span></span>
+      <button class="override-btn" onclick="moveThirdTeam(${i},-1)" ${canUp?'':'disabled'}>↑</button>
+      <button class="override-btn" onclick="moveThirdTeam(${i},1)" ${canDown?'':'disabled'}>↓</button>
+    </div>${i===7?`<div style="font-size:.7rem;color:var(--primary);margin:2px 0 4px 22px">— qualification boundary —</div>`:''}`
+  }).join('');
 
   panel.innerHTML = `<div class="override-panel">
-    <div class="override-panel-title">Adjust 3rd-place qualification order</div>
+    <div class="override-panel-title">Teams with equal stats can be reordered below</div>
     ${rows}
-    <input class="override-reason-input" type="text" placeholder="Reason (e.g. disciplinary points — shown in red)"
+    <input class="override-reason-input" type="text" placeholder="Note why (e.g. fewer yellow cards) — shown below the table"
       value="${reason.replace(/"/g,'&quot;')}"
       oninput="setThirdOverrideReason(this.value)">
     <div class="override-actions">
-      <button class="btn-override-clear" onclick="clearThirdOverride()">✕ Clear override</button>
+      <button class="btn-override-clear" onclick="clearThirdOverride()">✕ Reset to default</button>
     </div>
   </div>`;
 }
@@ -2159,7 +2170,7 @@ function renderGroups() {
           <tbody id="standings-${g}">${rows}</tbody>
         </table>
       </div>
-      <p id="override-note-${g}" class="override-note">${(ov && ov.reason) ? `⚠️ Manual order: ${ov.reason}` : ''}</p>
+      <p id="override-note-${g}" class="override-note">${(ov && ov.reason) ? `ℹ️ Order adjusted: ${ov.reason}` : ''}</p>
       <div id="override-panel-wrap-${g}">${_overridePanelOpen[g] ? buildOverridePanel(g) : ''}</div>`;
 
     // Gold border if already complete (loaded from saved state)
@@ -2856,12 +2867,12 @@ function updateProgress() {
     const warnings = detectUnresolvableTies();
     const box = document.getElementById('tiebreak-warnings');
     if (warnings.length) {
-      box.innerHTML = `<div style="background:rgba(224,85,85,.12);border:1px solid rgba(224,85,85,.4);border-radius:8px;padding:12px 16px;max-width:520px;margin:0 auto 4px;text-align:left">
-        <div style="font-size:.82rem;font-weight:700;color:var(--red);margin-bottom:8px">⚠️ Manual tiebreak required</div>
-        <div style="font-size:.78rem;color:var(--red);line-height:1.6">${warnings.map(w => `• ${w.desc}`).join('<br>')}</div>
-        <div style="font-size:.75rem;color:var(--muted);margin-top:8px">${lang === 'es'
-          ? 'Ajusta el orden manualmente en la tarjeta del grupo (grupos) o en la tabla de terceros (clasificación y exportar).'
-          : 'Adjust the order manually using "Adjust order" on the group card, or in the 3rd-place table on the Standings & Export tab.'
+      box.innerHTML = `<div style="background:rgba(200,169,81,.08);border:1px solid rgba(200,169,81,.3);border-radius:8px;padding:12px 16px;max-width:540px;margin:0 auto 4px;text-align:left">
+        <div style="font-size:.82rem;font-weight:700;color:var(--primary);margin-bottom:6px">ℹ️ ${lang==='es'?'Equipos empatados en estadísticas':'Teams level on all stats'}</div>
+        <div style="font-size:.78rem;color:var(--text);line-height:1.7">${warnings.map(w => `• ${w.desc}`).join('<br>')}</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:8px;line-height:1.5">${lang === 'es'
+          ? 'El orden actual es una estimación basada en el ranking FIFA. Puedes ajustarlo con "Adjust order" en la tarjeta del grupo, o en la tabla de terceros en la pestaña Clasificación y Exportar, si conoces el criterio real (p. ej. tarjetas).'
+          : 'The current order is a best estimate based on FIFA ranking. If you know the real deciding factor (e.g. disciplinary points), you can double-check and adjust it using "Adjust order" on the group card, or in the 3rd-place table on the Standings &amp; Export tab.'
         }</div>
       </div>`;
     } else {
