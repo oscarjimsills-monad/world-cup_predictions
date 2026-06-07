@@ -285,9 +285,11 @@ main{padding:0;max-width:1600px;margin:0 auto}
     <input class="award-input" id="export-name" type="text" placeholder="e.g. John Smith"
       style="margin-bottom:16px;font-size:1rem;padding:10px 14px"
       onkeydown="if(event.key==='Enter')confirmExport()">
-    <div style="display:flex;gap:10px">
+    <p id="save-status" style="font-size:.78rem;color:var(--muted);min-height:1.2em;margin-bottom:4px;text-align:center"></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-ghost" style="flex:1" onclick="closeExportModal()">Cancel</button>
-      <button class="btn btn-primary" style="flex:2" onclick="confirmExport()">⬇ Download</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="confirmExport(false)">⬇ Download</button>
+      <button class="btn btn-primary" style="flex:2" onclick="confirmExport(true)">☁️ Save & Download</button>
     </div>
   </div>
 </div>
@@ -663,7 +665,26 @@ function closeExportModal() {
   document.getElementById('export-name-modal').classList.add('hidden');
 }
 
-function confirmExport() {
+async function confirmExport(save) {
+  if (save) {
+    const status = document.getElementById('save-status');
+    status.style.color = 'var(--muted)';
+    status.textContent = 'Saving…';
+    const data = buildExportData();
+    const nameRaw = (document.getElementById('export-name')?.value || '').trim();
+    const namePart = nameRaw ? '_' + nameRaw.replace(/\s+/g, '_') : '';
+    const filename = `wc2026${namePart}.json`;
+    const ok = await saveToFormspree(filename, data);
+    if (ok) {
+      status.style.color = 'var(--green)';
+      status.textContent = '✓ Saved! Downloading…';
+      await new Promise(r => setTimeout(r, 800));
+    } else {
+      status.style.color = 'var(--red)';
+      status.textContent = '✗ Save failed — downloading locally only.';
+      await new Promise(r => setTimeout(r, 1200));
+    }
+  }
   closeExportModal();
   exportData();
 }
@@ -2476,7 +2497,7 @@ function updateProgress() {
   document.getElementById('group-complete-banner').style.display = filled >= 72 ? 'block' : 'none';
 }
 
-function exportData() {
+function buildExportData() {
   const resolved = recomputeKnockout();
   const standings = {};
   Object.keys(GROUPS).forEach(g => { standings[g] = computeStandings(g); });
@@ -2486,39 +2507,28 @@ function exportData() {
   ALL_KO.forEach(m => {
     const r = resolved[m.id] || {};
     const sc = knockoutScores[m.id] || {};
-    koResults[m.id] = {
-      label: m.label,
-      home: r.h, away: r.a,
-      homeScore: sc.h, awayScore: sc.a,
-      winner: r.winner, loser: r.loser,
-    };
+    koResults[m.id] = { label: m.label, home: r.h, away: r.a, homeScore: sc.h, awayScore: sc.a, winner: r.winner, loser: r.loser };
   });
 
-  // Build elimination predictions: teams knocked out in R32-SF, with round
   const autoElim = computeAutoElim(resolved);
   const teams = getKoTeams(resolved);
   const eliminationPredictions = teams
     .map(team => {
       const round = eliminationOverrides[team] || autoElim[team] || null;
-      // Include only if round is one of R32-SF (not Final, not Winner, not null)
       const koRounds = ['R32','R16','QF','SF'];
       return round && koRounds.includes(round) ? {team, round} : null;
-    })
-    .filter(Boolean);
+    }).filter(Boolean);
 
-  // Build awards (only include non-empty fields)
   const awards = {};
   if (tournamentAwards.topScorer) awards.topScorer = tournamentAwards.topScorer;
   if (tournamentAwards.bestPlayer) awards.bestPlayer = tournamentAwards.bestPlayer;
   if (tournamentAwards.bestGoalkeeper) awards.bestGoalkeeper = tournamentAwards.bestGoalkeeper;
 
-  // Build jokers (only include valid entries with a matchId)
   const jokers = redCardJokers.filter(j => j.matchId != null);
 
-  const data = {
+  return {
     exported: new Date().toISOString(),
-    groupScores,
-    standings,
+    groupScores, standings,
     thirdPlaceRanking: thirds,
     knockoutResults: koResults,
     champion: koResults[104]?.winner || null,
@@ -2527,11 +2537,13 @@ function exportData() {
     redCardJokers: jokers,
     eliminationPredictions,
   };
+}
 
+function exportData() {
+  const data = buildExportData();
   const nameRaw = (document.getElementById('export-name')?.value || '').trim();
   const namePart = nameRaw ? '_' + nameRaw.replace(/\s+/g, '_') : '';
   const filename = `wc2026${namePart}.json`;
-
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -2561,6 +2573,17 @@ function showTab(tab) {
   if (tab === 'knockout') renderKnockout();
   if (tab === 'export') updateExport();
   if (tab === 'scoring') renderScoringGuide();
+}
+
+// ===================== FORMSPREE SUBMISSION =====================
+
+async function saveToFormspree(filename, jsonData) {
+  const res = await fetch('https://formspree.io/f/mvznkzvn', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ name: filename, predictions: jsonData })
+  });
+  return res.ok;
 }
 
 // ===================== INIT =====================
