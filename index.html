@@ -222,6 +222,7 @@ main{padding:0;max-width:1600px;margin:0 auto}
   <div id="groups-section" class="section active">
     <div class="groups-grid" id="groups-grid"></div>
     <div id="group-complete-banner" style="display:none;padding:20px;text-align:center">
+      <div id="tiebreak-warnings" style="margin-bottom:14px"></div>
       <button class="btn btn-primary" style="font-size:1rem;padding:12px 28px" onclick="showTab('knockout')">🏆 To Knockout Bracket →</button>
     </div>
   </div>
@@ -247,10 +248,16 @@ main{padding:0;max-width:1600px;margin:0 auto}
       </div>
       <div class="card">
         <h3 data-i18n="thirdPlaceTitle">Best 3rd-Place Teams (Top 8 Qualify)</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span></span>
+          <button class="btn-override-toggle" id="third-override-toggle" onclick="toggleThirdOverridePanel()">Adjust order</button>
+        </div>
         <table class="third-place-table">
           <thead><tr><th data-i18n="colTeam">Team</th><th data-i18n="colGroup">Group</th><th>Pts</th><th>GD</th><th>GF</th><th data-i18n="colStatus">Status</th></tr></thead>
           <tbody id="third-place-table"></tbody>
         </table>
+        <p id="third-override-note" class="override-note" style="margin-top:4px"></p>
+        <div id="third-override-panel"></div>
         <p class="notice" data-i18n="thirdPlaceNotice">The exact slot assignment for 3rd-place teams follows FIFA's 495-scenario table based on which groups qualify. This app assigns them in ranking order to the 8 available slots.</p>
       </div>
       <div class="card">
@@ -1055,6 +1062,7 @@ let tournamentAwards = {}; // {topScorer, bestPlayer, bestGoalkeeper}
 let redCardJokers = []; // [{matchId, home, away}]
 let eliminationOverrides = {}; // {teamName: roundLabel} — user overrides
 let groupOrderOverrides = {}; // {group: {order:[...teams], reason:''}} — manual tiebreak overrides
+let thirdPlaceOverride = null; // {order:[...teamNames], reason:''} — manual 3rd-place ranking override
 
 function loadState() {
   try {
@@ -1066,15 +1074,16 @@ function loadState() {
     redCardJokers = s.redCardJokers || [];
     eliminationOverrides = s.eliminationOverrides || {};
     groupOrderOverrides = s.groupOrderOverrides || {};
+    thirdPlaceOverride = s.thirdPlaceOverride || null;
   } catch(e) {
     groupScores = {}; knockoutScores = {}; knockoutTeams = {};
     tournamentAwards = {}; redCardJokers = []; eliminationOverrides = {};
-    groupOrderOverrides = {};
+    groupOrderOverrides = {}; thirdPlaceOverride = null;
   }
 }
 
 function saveState() {
-  localStorage.setItem('wc2026', JSON.stringify({groupScores, knockoutScores, knockoutTeams, tournamentAwards, redCardJokers, eliminationOverrides, groupOrderOverrides}));
+  localStorage.setItem('wc2026', JSON.stringify({groupScores, knockoutScores, knockoutTeams, tournamentAwards, redCardJokers, eliminationOverrides, groupOrderOverrides, thirdPlaceOverride}));
 }
 
 // ===================== FIFA WORLD RANKINGS (April 2026) =====================
@@ -1215,6 +1224,56 @@ function getThirdPlace() {
     return (FIFA_RANKINGS[a.team]||999) - (FIFA_RANKINGS[b.team]||999);
   });
   return thirds;
+}
+
+// Returns 3rd-place ranking with any manual override applied
+function getThirdPlaceRanked() {
+  const computed = getThirdPlace();
+  if (!thirdPlaceOverride || !thirdPlaceOverride.order) return computed;
+  const map = {};
+  computed.forEach(s => { map[s.team] = s; });
+  const ordered = thirdPlaceOverride.order.map(t => map[t]).filter(Boolean);
+  computed.forEach(s => { if (!thirdPlaceOverride.order.includes(s.team)) ordered.push(s); });
+  return ordered;
+}
+
+// Detects ties that fell all the way to FIFA ranking (i.e., genuinely unresolvable by stats)
+// Returns array of {type, groups/teams, description}
+function detectUnresolvableTies() {
+  const warnings = [];
+
+  // Group-level ties resolved only by FIFA ranking
+  Object.keys(GROUPS).forEach(g => {
+    const st = computeStandings(g); // raw, no override
+    for (let i = 0; i < st.length - 1; i++) {
+      const a = st[i], b = st[i+1];
+      if (a.pts === b.pts && (a.gf-a.ga) === (b.gf-b.ga) && a.gf === b.gf) {
+        // Check H2H between these two (and any others at same level)
+        // If they're still tied they fell to FIFA ranking
+        warnings.push({
+          type: 'group',
+          group: g,
+          teams: [a.team, b.team],
+          desc: `Group ${g}: ${a.team} vs ${b.team} — tied on all stats, separated by FIFA ranking only`
+        });
+      }
+    }
+  });
+
+  // 3rd-place boundary tie: 8th and 9th are tied on all criteria
+  const thirds = getThirdPlace(); // raw computed
+  if (thirds.length >= 9) {
+    const t8 = thirds[7], t9 = thirds[8];
+    if (t8.pts === t9.pts && t8.gd === t9.gd && t8.gf === t9.gf) {
+      warnings.push({
+        type: 'third',
+        teams: [t8.team, t9.team],
+        desc: `3rd-place boundary: ${t8.team} (8th) vs ${t9.team} (9th) — tied on all stats, manual order needed`
+      });
+    }
+  }
+
+  return warnings;
 }
 
 // ===================== THIRD-PLACE SLOT ALLOCATION (FIFA Annex C) =====================
@@ -1727,7 +1786,7 @@ function resolveSlot(slot, resolved) {
     return st[slot.p - 1]?.team || null;
   }
   if (slot.third !== undefined) {
-    const thirds = getThirdPlace();
+    const thirds = getThirdPlaceRanked();
     const top8 = thirds.slice(0, 8);
     if (top8.length < 8) return null;
     const key = top8.map(t => t.group).sort().join('');
@@ -1830,6 +1889,7 @@ function getStandings(g) {
 }
 
 let _overridePanelOpen = {}; // which groups have the panel open
+let _thirdOverridePanelOpen = false;
 
 function toggleOverridePanel(g) {
   _overridePanelOpen[g] = !_overridePanelOpen[g];
@@ -1966,6 +2026,79 @@ function renderGroupCard(g) {
       }
     }
   });
+}
+
+// ===================== 3RD-PLACE OVERRIDE UI =====================
+
+function toggleThirdOverridePanel() {
+  _thirdOverridePanelOpen = !_thirdOverridePanelOpen;
+  renderThirdOverridePanel();
+}
+
+function moveThirdTeam(fromIdx, dir) {
+  const ranked = getThirdPlaceRanked();
+  const order = ranked.map(s => s.team);
+  const toIdx = fromIdx + dir;
+  if (toIdx < 0 || toIdx >= order.length) return;
+  [order[fromIdx], order[toIdx]] = [order[toIdx], order[fromIdx]];
+  const reason = thirdPlaceOverride ? thirdPlaceOverride.reason : '';
+  thirdPlaceOverride = { order, reason };
+  saveState();
+  renderThirdOverridePanel();
+  updateExport();
+  recomputeKnockout();
+  renderKnockout();
+}
+
+function setThirdOverrideReason(val) {
+  if (!thirdPlaceOverride) thirdPlaceOverride = { order: getThirdPlaceRanked().map(s => s.team), reason: '' };
+  thirdPlaceOverride.reason = val;
+  saveState();
+  const note = document.getElementById('third-override-note');
+  if (note) note.textContent = val ? `⚠️ Manual order: ${val}` : '';
+}
+
+function clearThirdOverride() {
+  thirdPlaceOverride = null;
+  _thirdOverridePanelOpen = false;
+  saveState();
+  renderThirdOverridePanel();
+  updateExport();
+  recomputeKnockout();
+  renderKnockout();
+}
+
+function renderThirdOverridePanel() {
+  const btn = document.getElementById('third-override-toggle');
+  if (btn) btn.textContent = _thirdOverridePanelOpen ? 'Done' : 'Adjust order';
+
+  const note = document.getElementById('third-override-note');
+  if (note) note.textContent = (thirdPlaceOverride && thirdPlaceOverride.reason) ? `⚠️ Manual order: ${thirdPlaceOverride.reason}` : '';
+
+  const panel = document.getElementById('third-override-panel');
+  if (!panel) return;
+  if (!_thirdOverridePanelOpen) { panel.innerHTML = ''; return; }
+
+  const ranked = getThirdPlaceRanked();
+  const reason = thirdPlaceOverride ? thirdPlaceOverride.reason : '';
+  const rows = ranked.map((s, i) => `
+    <div class="override-row">
+      <span style="font-size:.72rem;color:var(--muted);width:18px;text-align:right;flex-shrink:0">${i+1}</span>
+      <span class="override-team-name" style="${i===7?'border-bottom:1px dashed var(--red);padding-bottom:3px':''}">${FLAGS[s.team]||''} ${s.team} <span style="font-size:.7rem;color:var(--muted)">(${t('groupPrefix')}${s.group}, ${s.pts}pts)</span></span>
+      <button class="override-btn" onclick="moveThirdTeam(${i},-1)" ${i===0?'disabled':''}>↑</button>
+      <button class="override-btn" onclick="moveThirdTeam(${i},1)" ${i===ranked.length-1?'disabled':''}>↓</button>
+    </div>${i===7?`<div style="font-size:.7rem;color:var(--red);margin:2px 0 4px 22px">— qualification boundary —</div>`:''}`).join('');
+
+  panel.innerHTML = `<div class="override-panel">
+    <div class="override-panel-title">Adjust 3rd-place qualification order</div>
+    ${rows}
+    <input class="override-reason-input" type="text" placeholder="Reason (e.g. disciplinary points — shown in red)"
+      value="${reason.replace(/"/g,'&quot;')}"
+      oninput="setThirdOverrideReason(this.value)">
+    <div class="override-actions">
+      <button class="btn-override-clear" onclick="clearThirdOverride()">✕ Clear override</button>
+    </div>
+  </div>`;
 }
 
 function renderGroups() {
@@ -2691,7 +2824,7 @@ function updateExport() {
   document.getElementById('exp-third').textContent = thirdWinner === '—' ? '—' : (FLAGS[thirdWinner]||'') + ' ' + thirdWinner;
 
   // Third place table
-  const thirds = getThirdPlace();
+  const thirds = getThirdPlaceRanked();
   const tbody = document.getElementById('third-place-table');
   tbody.innerHTML = thirds.map((t,i) => `
     <tr class="${i<8?'qualifying':''}">
@@ -2707,6 +2840,7 @@ function updateExport() {
   renderAwards();
   renderJokers(finalRes);
   renderEliminations(finalRes);
+  renderThirdOverridePanel();
 }
 
 function updateProgress() {
@@ -2715,14 +2849,32 @@ function updateProgress() {
     return sc && sc.h != null && sc.a != null && sc.h !== '' && sc.a !== '';
   }).length;
   document.getElementById('progress-count').textContent = `${filled}/72`;
-  document.getElementById('group-complete-banner').style.display = filled >= 72 ? 'block' : 'none';
+  const complete = filled >= 72;
+  document.getElementById('group-complete-banner').style.display = complete ? 'block' : 'none';
+
+  if (complete) {
+    const warnings = detectUnresolvableTies();
+    const box = document.getElementById('tiebreak-warnings');
+    if (warnings.length) {
+      box.innerHTML = `<div style="background:rgba(224,85,85,.12);border:1px solid rgba(224,85,85,.4);border-radius:8px;padding:12px 16px;max-width:520px;margin:0 auto 4px;text-align:left">
+        <div style="font-size:.82rem;font-weight:700;color:var(--red);margin-bottom:8px">⚠️ Manual tiebreak required</div>
+        <div style="font-size:.78rem;color:var(--red);line-height:1.6">${warnings.map(w => `• ${w.desc}`).join('<br>')}</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:8px">${lang === 'es'
+          ? 'Ajusta el orden manualmente en la tarjeta del grupo (grupos) o en la tabla de terceros (clasificación y exportar).'
+          : 'Adjust the order manually using "Adjust order" on the group card, or in the 3rd-place table on the Standings & Export tab.'
+        }</div>
+      </div>`;
+    } else {
+      box.innerHTML = '';
+    }
+  }
 }
 
 function buildExportData() {
   const resolved = recomputeKnockout();
   const standings = {};
   Object.keys(GROUPS).forEach(g => { standings[g] = getStandings(g); });
-  const thirds = getThirdPlace();
+  const thirds = getThirdPlaceRanked();
 
   const koResults = {};
   ALL_KO.forEach(m => {
