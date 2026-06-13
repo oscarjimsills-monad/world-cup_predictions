@@ -201,6 +201,16 @@ main{padding:0;max-width:1600px;margin:0 auto}
 .lang-choice-btn .lang-flag{font-size:2rem;line-height:1}
 .lang-toggle-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:inherit;font-size:.8rem;padding:5px 10px;cursor:pointer;transition:all .15s}
 .lang-toggle-btn:hover{border-color:var(--primary);color:var(--primary)}
+#save-toast{
+  position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#1a3a28;border:1.5px solid var(--green);border-radius:12px;
+  padding:16px 28px;text-align:center;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,.5);
+  z-index:9999;opacity:0;pointer-events:none;transition:opacity .35s,transform .35s;
+  max-width:min(420px,90vw);
+}
+#save-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#save-toast .toast-title{font-size:1.1rem;font-weight:700;color:var(--green);margin-bottom:4px}
+#save-toast .toast-sub{font-size:.85rem;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -277,7 +287,7 @@ main{padding:0;max-width:1600px;margin:0 auto}
           </div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="jokers-card">
         <h3 data-i18n="jokersTitle">🟥 Red Card Jokers</h3>
         <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px" data-i18n="jokersDesc">Flag up to 5 matches where you predict a red card will be shown.</p>
         <div class="joker-list" id="joker-list"></div>
@@ -325,7 +335,7 @@ main{padding:0;max-width:1600px;margin:0 auto}
     <ul id="incomplete-list" style="list-style:none;margin-bottom:20px;display:flex;flex-direction:column;gap:8px"></ul>
     <div style="display:flex;gap:10px">
       <button id="incomplete-back-btn" class="btn btn-ghost" style="flex:1" onclick="closeIncompleteModal()">Go back</button>
-      <button id="incomplete-anyway-btn" class="btn btn-primary" style="flex:1" onclick="closeIncompleteModal();openNameModal()">Download anyway</button>
+      <button id="incomplete-anyway-btn" class="btn btn-primary" style="flex:1" onclick="closeIncompleteModal();openNameModal()">Submit anyway</button>
     </div>
   </div>
 </div>
@@ -415,13 +425,16 @@ const T = {
     incompleteIntro: 'The following sections are incomplete:',
     incompleteGoBack: 'Go back',
     incompleteDownloadAnyway: 'Download anyway',
+    incompleteSaveAnyway: 'Save anyway',
     incompleteGoThere: 'Go there',
     incompleteGroupStage: g => `Group Stage — ${g} match${g > 1 ? 'es' : ''} unfilled`,
     incompleteKnockout: g => `Knockout Bracket — ${g} match${g > 1 ? 'es' : ''} unfilled`,
     incompleteAwards: a => `Awards — ${a} missing`,
+    incompleteJokers: n => `Red Card Jokers — ${n} of 5 picks missing. Predicting all 5 earns you bonus points if a red card is shown in that match.`,
     incompleteGoldenBoot: 'Golden Boot',
     incompleteGoldenBall: 'Golden Ball',
     incompleteGoldenGlove: 'Golden Glove',
+    incomplete3rdPens: '3rd Place match is a draw — pick a penalty shootout winner',
 
     // Groups
     groupWord: 'GROUP',
@@ -558,13 +571,16 @@ const T = {
     incompleteIntro: 'Las siguientes secciones están incompletas:',
     incompleteGoBack: 'Volver',
     incompleteDownloadAnyway: 'Descargar igualmente',
+    incompleteSaveAnyway: 'Guardar igualmente',
     incompleteGoThere: 'Ir ahí',
     incompleteGroupStage: g => `Fase de Grupos — ${g} partido${g > 1 ? 's' : ''} sin rellenar`,
     incompleteKnockout: g => `Cuadro Eliminatorio — ${g} partido${g > 1 ? 's' : ''} sin rellenar`,
     incompleteAwards: a => `Premios — falta: ${a}`,
+    incompleteJokers: n => `Comodines Tarjeta Roja — falta${n > 1 ? 'n' : ''} ${n} de 5. Predecir los 5 te da puntos extra si se muestra una roja en ese partido.`,
     incompleteGoldenBoot: 'Bota de Oro',
     incompleteGoldenBall: 'Balón de Oro',
     incompleteGoldenGlove: 'Guante de Oro',
+    incomplete3rdPens: 'El partido por el 3.º puesto acaba en empate — elige el ganador en los penaltis',
 
     groupWord: 'GRUPO',
     clearBtn: '✕ Borrar',
@@ -671,6 +687,19 @@ function checkIncomplete() {
     issues.push({ text: t('incompleteKnockout')(32 - koFilled), tab: 'knockout', icon: '🏆' });
   }
 
+  // 3rd place match draw without a penalty winner
+  const sc103 = knockoutScores[103];
+  if (sc103 && sc103.h != null && sc103.a != null && sc103.h !== '' && sc103.a !== '' &&
+      +sc103.h === +sc103.a && !sc103.pens) {
+    issues.push({ text: t('incomplete3rdPens'), tab: 'knockout', icon: '🥉' });
+  }
+
+  // Red card jokers — all 5 slots must have a match selected
+  const jokersFilled = redCardJokers.filter(j => j && j.matchId != null).length;
+  if (jokersFilled < 5) {
+    issues.push({ text: t('incompleteJokers')(5 - jokersFilled), tab: 'export', scrollTo: 'jokers-card', icon: '🟥' });
+  }
+
   // Tournament awards
   const missingAwards = [];
   if (!tournamentAwards.topScorer)      missingAwards.push(t('incompleteGoldenBoot'));
@@ -687,26 +716,34 @@ function closeIncompleteModal() {
   document.getElementById('incomplete-modal').classList.add('hidden');
 }
 
-function openExportModal() {
-  // Run incomplete check first
+function openExportModal(action = 'download') {
+  // action: 'download' | 'save'
   const issues = checkIncomplete();
   if (issues.length) {
-    // Translate static modal text
     document.getElementById('incomplete-title').textContent = t('incompleteTitle');
     document.getElementById('incomplete-intro').textContent = t('incompleteIntro');
     document.getElementById('incomplete-back-btn').textContent = t('incompleteGoBack');
-    document.getElementById('incomplete-anyway-btn').textContent = t('incompleteDownloadAnyway');
+    const anywayBtn = document.getElementById('incomplete-anyway-btn');
+    anywayBtn.textContent = action === 'save' ? t('incompleteSaveAnyway') : t('incompleteDownloadAnyway');
+    anywayBtn.onclick = action === 'save'
+      ? () => { closeIncompleteModal(); proceedWithSave(); }
+      : () => { closeIncompleteModal(); openNameModal(); };
     const list = document.getElementById('incomplete-list');
-    list.innerHTML = issues.map(issue => `
-      <li style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <span style="font-size:.85rem">${issue.icon} ${issue.text}</span>
-        <button class="btn btn-ghost" style="font-size:.75rem;padding:4px 10px;white-space:nowrap"
-          onclick="closeIncompleteModal();showTab('${issue.tab}')">${t('incompleteGoThere')}</button>
-      </li>`).join('');
+    list.innerHTML = issues.map(issue => {
+      const goAction = issue.scrollTo
+        ? `closeIncompleteModal();showTab('${issue.tab}');setTimeout(()=>{const el=document.getElementById('${issue.scrollTo}');if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},120)`
+        : `closeIncompleteModal();showTab('${issue.tab}')`;
+      return `
+      <li style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <span style="font-size:.85rem;line-height:1.45">${issue.icon} ${issue.text}</span>
+        <button class="btn btn-ghost" style="font-size:.75rem;padding:4px 10px;white-space:nowrap;flex-shrink:0"
+          onclick="${goAction}">${t('incompleteGoThere')}</button>
+      </li>`;
+    }).join('');
     document.getElementById('incomplete-modal').classList.remove('hidden');
     return;
   }
-  openNameModal();
+  if (action === 'save') { proceedWithSave(); } else { openNameModal(); }
 }
 
 function openNameModal() {
@@ -737,35 +774,47 @@ async function confirmExport(action) {
   const filename = `wc2026${namePart}.json`;
 
   if (action === 'save') {
+    if (_predictionSaved) return;
     if (!nameRaw) {
       status.style.color = 'var(--red)';
       status.textContent = lang === 'es' ? '✗ Introduce tu nombre antes de guardar.' : '✗ Please enter your name before saving.';
       document.getElementById('export-name').focus();
       return;
     }
-    status.style.color = 'var(--muted)';
-    status.textContent = 'Saving…';
-    // Disable buttons during save
-    document.getElementById('export-save-btn').disabled = true;
-    document.getElementById('export-download-btn').disabled = true;
-    const data = buildExportData();
-    const ok = await saveToFormspree(filename, data);
-    document.getElementById('export-save-btn').disabled = false;
-    document.getElementById('export-download-btn').disabled = false;
-    if (ok) {
-      status.style.color = 'var(--green)';
-      status.textContent = '✓ Predictions saved!';
-    } else {
-      status.style.color = 'var(--red)';
-      status.textContent = '✗ Save failed — check your connection and try again.';
-    }
-    // Don't close — let user see the result, close manually or download too
+    openExportModal('save');
     return;
   }
 
   if (action === 'download') {
     closeExportModal();
     exportData();
+  }
+}
+
+async function proceedWithSave() {
+  const status = document.getElementById('save-status');
+  const nameRaw = (document.getElementById('export-name')?.value || '').trim();
+  const namePart = nameRaw ? '_' + nameRaw.replace(/\s+/g, '_') : '';
+  const filename = `wc2026${namePart}.json`;
+  status.style.color = 'var(--muted)';
+  status.textContent = 'Saving…';
+  document.getElementById('export-save-btn').disabled = true;
+  document.getElementById('export-download-btn').disabled = true;
+  const data = buildExportData();
+  const ok = await saveToFormspree(filename, data);
+  if (!ok) {
+    document.getElementById('export-save-btn').disabled = false;
+    document.getElementById('export-download-btn').disabled = false;
+  }
+  if (ok) {
+    _predictionSaved = true;
+    showTab('groups');
+    showSaveToast();
+  } else {
+    status.style.color = 'var(--red)';
+    status.textContent = lang === 'es'
+      ? '✗ Error al guardar — comprueba tu conexión e inténtalo de nuevo.'
+      : '✗ Save failed — check your connection and try again.';
   }
 }
 
@@ -1055,6 +1104,7 @@ const FINAL = {id:104,h:{win:101},a:{win:102},label:'Final',utc:'2026-07-19T19:0
 const ALL_KO = [...R32,...R16,...QF,...SF,THIRD_PLACE,FINAL];
 
 // ===================== STATE =====================
+let _predictionSaved = false; // true once a submission has been confirmed — blocks re-submission
 let groupScores = {}; // {fixtureId: {h,a}}
 let knockoutScores = {}; // {matchId: {h,a}}
 let knockoutTeams = {}; // {matchId: {h:team,a:team}} — stored to detect changes
@@ -3061,8 +3111,24 @@ function showTab(tab) {
 
 // ===================== FORMSPREE SUBMISSION =====================
 
+function showSaveToast() {
+  const toast = document.getElementById('save-toast');
+  const title = document.getElementById('save-toast-title');
+  const sub   = document.getElementById('save-toast-sub');
+  if (lang === 'es') {
+    title.textContent = '¡Mandado!';
+    sub.textContent   = '';
+  } else {
+    title.textContent = 'Sent!';
+    sub.textContent   = '';
+  }
+  toast.classList.add('show');
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => toast.classList.remove('show'), 5000);
+}
+
 async function saveToFormspree(filename, jsonData) {
-  const res = await fetch('https://formspree.io/f/mvznkzvn', {
+  const res = await fetch('https://formspree.io/f/xjgdawde', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify({ name: filename, predictions: jsonData })
@@ -3088,5 +3154,9 @@ if (_savedLang === 'en' || _savedLang === 'es') {
 recomputeKnockout();
 updateProgress();
 </script>
+<div id="save-toast">
+  <div class="toast-title" id="save-toast-title"></div>
+  <div class="toast-sub"   id="save-toast-sub"></div>
+</div>
 </body>
 </html>
